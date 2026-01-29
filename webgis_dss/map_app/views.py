@@ -1,81 +1,89 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.gis.geos import GEOSGeometry
 from .models import PhongTro
 import requests
 import json
+import traceback
 
-# --- CẤU HÌNH ---
-# Dán cái Key bắt đầu bằng "cy..." của bạn vào giữa 2 dấu nháy bên dưới:
-ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0='
+# --- CẤU HÌNH API ---
+# Nhớ dán Key cy... của bạn vào đây nhé
+ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
 
-def index(request):
-    """Hàm này để hiển thị trang chủ (Giao diện bản đồ)"""
-    return render(request, 'map_app/index.html')
+# 1. HÀM TRANG CHỦ (MỚI) - Để hiện giao diện giới thiệu đẹp
+def home(request):
+    # Lấy 6 phòng trọ mới nhất để hiện ra trang chủ
+    latest_rooms = PhongTro.objects.order_by('-created_at')[:6]
+    return render(request, 'map_app/home.html', {'rooms': latest_rooms})
 
+# 2. HÀM BẢN ĐỒ (ĐỔI TÊN TỪ INDEX CŨ) - Để hiện chức năng GIS
+def map_view(request):
+    return render(request, 'map_app/map.html') 
+
+# 3. TRANG CHI TIẾT
+def room_detail(request, pk):
+    phong = get_object_or_404(PhongTro, pk=pk)
+    return render(request, 'map_app/detail.html', {'phong': phong})
+
+# 4. API TÌM KIẾM (Tool 1 & 2)
 def search_api(request):
-    """Hàm này nhận yêu cầu từ web, tính toán và trả về kết quả"""
     try:
-        # 1. Lấy dữ liệu người dùng gửi lên (Tọa độ và thời gian)
         lat = float(request.GET.get('lat'))
         lng = float(request.GET.get('lng'))
         time_min = int(request.GET.get('time'))
+        
+        print(f"👉 Đang tìm: Lat={lat}, Lng={lng}, Time={time_min}")
 
-        # 2. Gọi OpenRouteService để tính vùng đi lại (Isochrone)
         headers = {
-            'Authorization': ORS_API_KEY,
+            'Authorization': ORS_API_KEY.strip(),
             'Content-Type': 'application/json'
         }
-        
-        # Cấu hình gửi đi
         body = {
-            "locations": [[lng, lat]], # Lưu ý: ORS dùng [Kinh độ, Vĩ độ]
-            "range": [time_min * 60],  # Đổi phút sang giây
-            "range_type": "time",
+            "locations": [[lng, lat]], 
+            "range": [time_min * 60], 
+            "range_type": "time", 
             "attributes": ["area"]
         }
         
-        # Gửi request
-        response = requests.post(
-            "https://api.openrouteservice.org/v2/isochrones/driving-car",
-            json=body,
-            headers=headers
-        )
+        response = requests.post("https://api.openrouteservice.org/v2/isochrones/driving-car", json=body, headers=headers)
         
-        # Kiểm tra nếu lỗi
         if response.status_code != 200:
-            return JsonResponse({'error': 'Lỗi kết nối bản đồ. Kiểm tra lại API Key!'}, status=400)
+            return JsonResponse({'error': f'Lỗi API: {response.text}'}, status=400)
 
         data = response.json()
-        
-        # 3. Xử lý kết quả trả về
-        # Lấy hình đa giác (Polygon) từ dữ liệu JSON
         geometry_json = json.dumps(data['features'][0]['geometry'])
         polygon = GEOSGeometry(geometry_json)
 
-        # 4. Truy vấn Database (Tìm phòng trọ nằm TRONG vùng này)
-        # __within là câu lệnh thần thánh của PostGIS
         phong_tros = PhongTro.objects.filter(location__within=polygon)
-
-        # 5. Đóng gói kết quả gửi về cho Web
+        
         results = []
         for p in phong_tros:
+            img_url = p.hinh_anh.url if p.hinh_anh else ""
             results.append({
-                'id': p.id,
-                'ten': p.ten,
-                'gia': p.gia_thue,
-                'dia_chi': p.dia_chi,
-                'lat': p.location.y,
-                'lng': p.location.x
+                'id': p.id, 'ten': p.ten, 'gia': p.gia_thue, 
+                'dia_chi': p.dia_chi, 'lat': p.location.y, 'lng': p.location.x,
+                'img': img_url
             })
 
-        return JsonResponse({
-            'success': True,
-            'polygon': data,   # Vùng xanh để vẽ
-            'rooms': results,  # Danh sách phòng để hiện
-            'count': len(results)
-        })
+        return JsonResponse({'success': True, 'polygon': data, 'rooms': results, 'count': len(results)})
 
     except Exception as e:
-        print(f"Lỗi Server: {e}")
+        print("❌ LỖI SERVER:")
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
+
+# 5. API DẪN ĐƯỜNG (Tool 3)
+def route_api(request):
+    try:
+        start_lat = request.GET.get('start_lat')
+        start_lng = request.GET.get('start_lng')
+        end_lat = request.GET.get('end_lat')
+        end_lng = request.GET.get('end_lng')
+
+        url = f"https://api.openrouteservice.org/v2/directions/driving-car?start={start_lng},{start_lat}&end={end_lng},{end_lat}"
+        headers = {'Authorization': ORS_API_KEY.strip()}
+        
+        response = requests.get(url, headers=headers)
+        return JsonResponse(response.json())
+    except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

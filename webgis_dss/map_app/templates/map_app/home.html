@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartRent - Tìm Trọ Thông Minh</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; }
+        
+        /* HEADER & HERO */
+        .navbar { background-color: #1a237e; padding: 15px 0; }
+        .hero-section {
+            background: linear-gradient(rgba(26, 35, 126, 0.8), rgba(26, 35, 126, 0.8)), url('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+            background-size: cover; background-position: center; color: white; padding: 100px 0; text-align: center;
+        }
+        .search-bar { background: white; padding: 20px; border-radius: 10px; max-width: 800px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        
+        /* CARDS */
+        .room-card { transition: 0.3s; border: none; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 100%; background: white; }
+        .room-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .room-img { height: 200px; object-fit: cover; width: 100%; }
+        .price-tag { color: #d32f2f; font-weight: bold; font-size: 1.2rem; }
+        
+        /* FOOTER */
+        footer { background: #1a237e; color: white; padding: 40px 0; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-uppercase" href="/">🏠 SmartRent GIS</a>
+            <div class="collapse navbar-collapse justify-content-end">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link active" href="/">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="/ban-do/">🗺️ Bản đồ Tìm trọ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Tin tức</a></li>
+                    <li class="nav-item ms-3"><a href="#" class="btn btn-warning text-dark fw-bold">Đăng tin</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero-section">
+        <div class="container">
+            <h1 class="display-4 fw-bold mb-3">Tìm Phòng Trọ Thông Minh Với GIS</h1>
+            <p class="lead mb-4">Sử dụng công nghệ bản đồ số để tìm nơi ở phù hợp nhất với vị trí làm việc của bạn.</p>
+            
+            <div class="search-bar mt-4">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-8">
+                        <input type="text" class="form-control form-control-lg" placeholder="Bạn muốn tìm trọ ở khu vực nào?">
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/ban-do/" class="btn btn-danger btn-lg w-100 fw-bold"><i class="bi bi-map"></i> MỞ BẢN ĐỒ NGAY</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+        <h2 class="text-primary fw-bold mb-4 border-start border-5 border-primary ps-3">Phòng Trọ Mới Nhất</h2>
+        
+        <div class="row">
+            {% for phong in rooms %}
+            <div class="col-md-4 mb-4">
+                <div class="card room-card">
+                    {% if phong.hinh_anh %}
+                        <img src="{{ phong.hinh_anh.url }}" class="room-img" alt="{{ phong.ten }}">
+                    {% else %}
+                        <div class="room-img d-flex align-items-center justify-content-center bg-secondary text-white">
+                            <span>Chưa có ảnh</span>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title fw-bold text-truncate">{{ phong.ten }}</h5>
+                        <p class="price-tag mb-1">{{ phong.gia_thue }} VNĐ/tháng</p>
+                        <p class="card-text text-muted small mb-3"><i class="bi bi-geo-alt-fill"></i> {{ phong.dia_chi }}</p>
+                        <div class="mt-auto d-flex justify-content-between">
+                            <span class="badge bg-info text-dark">{{ phong.dien_tich }} m²</span>
+                            <a href="/phong-tro/{{ phong.id }}/" class="btn btn-sm btn-outline-primary stretched-link">Xem chi tiết</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <p class="text-center text-muted">Chưa có phòng trọ nào được đăng.</p>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="/ban-do/" class="btn btn-outline-primary btn-lg">Xem tất cả trên Bản đồ GIS</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p class="mb-0">© 2026 SmartRent - Đồ án WebGIS Sinh viên</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

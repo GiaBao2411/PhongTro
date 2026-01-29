@@ -129,15 +129,38 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
+import sys
 
-# --- ĐOẠN CODE CẤU HÌNH GDAL ---
+# --- CẤU HÌNH GDAL TỰ ĐỘNG CHO CẢ NHÓM (LEGION & ASUS) ---
 if os.name == 'nt':
-    VENV_BASE = r"C:\Users\ASUS\anaconda3\envs\webgis_env"
+    # 1. Tự động lấy đường dẫn môi trường Anaconda đang chạy
+    # Trên máy Legion nó sẽ tự ra: C:\Users\Legion\anaconda3\envs\webgis_env
+    # Trên máy ASUS nó sẽ tự ra: C:\Users\ASUS\anaconda3\envs\webgis_env
+    VENV_BASE = sys.prefix 
     
-    os.environ['PATH'] = os.path.join(VENV_BASE, 'Library', 'bin') + ';' + os.environ['PATH']
+    # 2. Định nghĩa thư mục bin chứa file dll
+    LIBRARY_BIN = os.path.join(VENV_BASE, 'Library', 'bin')
     
-    # SỬA LẠI DÒNG NÀY: Dùng tên "gdal.dll" chính xác như trong ảnh bạn chụp
-    GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll') 
+    # 3. Thêm vào biến môi trường (để Windows tìm thấy file)
+    os.environ['PATH'] = LIBRARY_BIN + ';' + os.environ['PATH']
     
+    # 4. TỰ ĐỘNG QUÉT TÌM FILE GDAL (Không cần quan tâm tên là gdal.dll hay gdal304.dll)
+    GDAL_LIBRARY_PATH = None
+    if os.path.exists(LIBRARY_BIN):
+        for filename in os.listdir(LIBRARY_BIN):
+            # Tìm file bắt đầu bằng 'gdal', đuôi '.dll' và KHÔNG có chữ 'wrap'
+            if filename.startswith('gdal') and filename.endswith('.dll') and 'wrap' not in filename:
+                GDAL_LIBRARY_PATH = os.path.join(LIBRARY_BIN, filename)
+                print(f"--> ĐÃ TỰ ĐỘNG NHẬN DIỆN GDAL TẠI: {GDAL_LIBRARY_PATH}")
+                break
+    
+    # 5. Cấu hình các dữ liệu phụ trợ
     os.environ['GDAL_DATA'] = os.path.join(VENV_BASE, 'Library', 'share', 'gdal')
     os.environ['PROJ_LIB'] = os.path.join(VENV_BASE, 'Library', 'share', 'proj')
+
+    if not GDAL_LIBRARY_PATH:
+        print("!!! CẢNH BÁO: Không tìm thấy file gdal trong thư mục Library/bin !!!")
+
+# Cấu hình lưu trữ file ảnh
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

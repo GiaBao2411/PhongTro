@@ -1,16 +1,17 @@
-
-# Create your models here.
-from django.contrib.gis.db import models # Quan trọng: Phải import từ gis.db
+from django.contrib.gis.db import models
 
 class PhongTro(models.Model):
-    # Các thông tin cơ bản
-    ten = models.CharField(max_length=200, verbose_name="Tên phòng trọ")
-    dia_chi = models.CharField(max_length=500, verbose_name="Địa chỉ")
-    gia_thue = models.IntegerField(help_text="VNĐ/tháng", verbose_name="Giá thuê")
+    ten = models.CharField(max_length=200, verbose_name="Tiêu đề tin đăng")
+    dia_chi = models.CharField(max_length=500, verbose_name="Địa chỉ cụ thể")
+    gia_thue = models.IntegerField(verbose_name="Giá (VNĐ/tháng)")
     
-    # Đây là "trái tim" của WebGIS: Field này lưu trữ tọa độ (Kinh độ/Vĩ độ)
-    # srid=4326 là hệ tọa độ GPS chuẩn quốc tế (WGS84)
-    location = models.PointField(srid=4326, verbose_name="Vị trí trên bản đồ")
+    # Các trường mới thêm vào
+    dien_tich = models.IntegerField(default=20, verbose_name="Diện tích (m2)")
+    sdt_lien_he = models.CharField(max_length=15, default="0909000000", verbose_name="SĐT Liên hệ")
+    hinh_anh = models.ImageField(upload_to='phong_tro/', blank=True, null=True, verbose_name="Hình ảnh thực tế")
+    
+    # Trường quan trọng nhất: Tọa độ
+    location = models.PointField(srid=4326, verbose_name="Vị trí bản đồ")
     
     mo_ta = models.TextField(blank=True, verbose_name="Mô tả chi tiết")
     created_at = models.DateTimeField(auto_now_add=True)
