@@ -31,15 +31,15 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    'django.contrib.gis', 
-    'map_app',            
-    'leaflet',
+    'jazzmin',                  # <--- Thêm dòng này lên đầu tiên
+    'django.contrib.admin',     # Cái này có sẵn, giữ nguyên
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.gis',       # Cái GIS của bạn
+    'map_app',
 ]
 
 MIDDLEWARE = [
@@ -91,20 +91,7 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
-]
+AUTH_PASSWORD_VALIDATORS = []
 
 
 # Internationalization
@@ -129,38 +116,33 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
-import sys
 
-# --- CẤU HÌNH GDAL TỰ ĐỘNG CHO CẢ NHÓM (LEGION & ASUS) ---
+# --- ĐOẠN CODE CẤU HÌNH GDAL ---
 if os.name == 'nt':
-    # 1. Tự động lấy đường dẫn môi trường Anaconda đang chạy
-    # Trên máy Legion nó sẽ tự ra: C:\Users\Legion\anaconda3\envs\webgis_env
-    # Trên máy ASUS nó sẽ tự ra: C:\Users\ASUS\anaconda3\envs\webgis_env
-    VENV_BASE = sys.prefix 
+    VENV_BASE = r"C:\Users\ASUS\anaconda3\envs\webgis_env"
     
-    # 2. Định nghĩa thư mục bin chứa file dll
-    LIBRARY_BIN = os.path.join(VENV_BASE, 'Library', 'bin')
+    os.environ['PATH'] = os.path.join(VENV_BASE, 'Library', 'bin') + ';' + os.environ['PATH']
     
-    # 3. Thêm vào biến môi trường (để Windows tìm thấy file)
-    os.environ['PATH'] = LIBRARY_BIN + ';' + os.environ['PATH']
+    # SỬA LẠI DÒNG NÀY: Dùng tên "gdal.dll" chính xác như trong ảnh bạn chụp
+    GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll') 
     
-    # 4. TỰ ĐỘNG QUÉT TÌM FILE GDAL (Không cần quan tâm tên là gdal.dll hay gdal304.dll)
-    GDAL_LIBRARY_PATH = None
-    if os.path.exists(LIBRARY_BIN):
-        for filename in os.listdir(LIBRARY_BIN):
-            # Tìm file bắt đầu bằng 'gdal', đuôi '.dll' và KHÔNG có chữ 'wrap'
-            if filename.startswith('gdal') and filename.endswith('.dll') and 'wrap' not in filename:
-                GDAL_LIBRARY_PATH = os.path.join(LIBRARY_BIN, filename)
-                print(f"--> ĐÃ TỰ ĐỘNG NHẬN DIỆN GDAL TẠI: {GDAL_LIBRARY_PATH}")
-                break
-    
-    # 5. Cấu hình các dữ liệu phụ trợ
     os.environ['GDAL_DATA'] = os.path.join(VENV_BASE, 'Library', 'share', 'gdal')
     os.environ['PROJ_LIB'] = os.path.join(VENV_BASE, 'Library', 'share', 'proj')
 
-    if not GDAL_LIBRARY_PATH:
-        print("!!! CẢNH BÁO: Không tìm thấy file gdal trong thư mục Library/bin !!!")
-
 # Cấu hình lưu trữ file ảnh
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Cấu hình giao diện Admin (Jazzmin)
+JAZZMIN_SETTINGS = {
+    "site_title": "Quản Trị SmartRent",
+    "site_header": "SmartRent Admin",
+    "site_brand": "Admin Phòng Trọ",
+    "welcome_sign": "Chào mừng quay lại trang quản trị",
+    "copyright": "SmartRent Ltd",
+    "search_model": "auth.User",
+}
+
+
+LOGIN_REDIRECT_URL = 'login_success' 
+LOGOUT_REDIRECT_URL = 'home'         

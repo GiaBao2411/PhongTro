@@ -1,0 +1,44 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Tin Tức & Sự Kiện{% endblock %}
+
+{% block content %}
+<div class="bg-light py-5">
+    <div class="container">
+        <h1 class="text-center fw-bold text-primary mb-5">📰 TIN TỨC & THỊ TRƯỜNG</h1>
+        
+        <div class="row g-4">
+            {% for item in news %}
+            <div class="col-md-4">
+                <div class="card h-100 shadow border-0 hover-effect">
+                    <div style="height: 220px; overflow: hidden;">
+                        {% if item.hinh_anh %}
+                            <a href="{% url 'news_detail' item.id %}">
+                                <img src="{{ item.hinh_anh.url }}" class="w-100 h-100" style="object-fit: cover; transition: 0.3s;">
+                            </a>
+                        {% else %}
+                            <div class="bg-secondary h-100 d-flex align-items-center justify-content-center text-white">No Image</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body">
+                        <small class="text-muted"><i class="bi bi-calendar3"></i> {{ item.ngay_dang|date:"d/m/Y" }}</small>
+                        <h5 class="fw-bold mt-2">
+                            <a href="{% url 'news_detail' item.id %}" class="text-decoration-none text-dark">{{ item.tieu_de }}</a>
+                        </h5>
+                        <p class="text-muted small">{{ item.tom_tat|truncatechars:100 }}</p>
+                        <a href="{% url 'news_detail' item.id %}" class="btn btn-outline-primary btn-sm fw-bold">Đọc tiếp &rarr;</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <div class="text-center py-5">Hiện chưa có tin tức nào.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-effect:hover { transform: translateY(-5px); }
+    .hover-effect img:hover { transform: scale(1.1); }
+</style>
+{% endblock %}

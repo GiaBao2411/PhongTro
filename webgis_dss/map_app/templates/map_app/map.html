@@ -1,184 +1,165 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartRent - Hệ Thống Tìm Trọ Thông Minh</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
-    <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #f4f6f9; display: flex; flex-direction: column; height: 100vh; margin: 0; }
-        .navbar { background-color: #1a237e; padding: 15px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .navbar-brand { color: white !important; font-weight: 700; text-transform: uppercase; }
-        .nav-link { color: rgba(255,255,255,0.8) !important; font-weight: 500; margin-left: 15px; }
-        .btn-login { background-color: #ffca28; color: #1a237e; font-weight: bold; border: none; padding: 8px 20px; border-radius: 20px; }
-        .main-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-        #sidebar { width: 400px; background: white; display: flex; flex-direction: column; border-right: 1px solid #ddd; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
-        .search-box { padding: 20px; background: #fff; border-bottom: 1px solid #eee; }
-        .btn-search { width: 100%; padding: 12px; background: #d32f2f; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
-        #results-area { flex-grow: 1; overflow-y: auto; padding: 15px; background: #f8f9fa; }
-        .room-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid transparent; transition: 0.2s; }
-        .room-card:hover { transform: translateY(-3px); border-color: #1a237e; }
-        .room-info { padding: 15px; }
-        .room-name { font-weight: bold; color: #333; font-size: 1.1rem; }
-        .room-price { color: #d32f2f; font-weight: bold; font-size: 1.1rem; }
-        #map { flex-grow: 1; height: 100%; }
-    </style>
-</head>
-<body>
+{% extends 'map_app/base.html' %}
+{% block title %}Bản Đồ Tìm Kiếm Thông Minh{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #main-content { flex-grow: 1; display: flex; flex-direction: column; height: calc(100vh - 76px); }
+    .map-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+    #sidebar { width: 350px; background: white; display: flex; flex-direction: column; border-right: 1px solid #ddd; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+    #map { flex-grow: 1; height: 100%; width: 100%; }
+    .room-card { cursor: pointer; border-bottom: 1px solid #eee; padding: 10px; transition: 0.2s; background: #fff; position: relative; }
+    .room-card:hover { background-color: #f0f8ff; border-color: #0d6efd; }
+</style>
+{% endblock %}
 
-    <nav class="navbar navbar-expand-lg">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#"><i class="bi bi-building"></i> 🏠 SmartRent GIS</a>
-            <div class="collapse navbar-collapse justify-content-end">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item"><a class="nav-link" href="/home.html">Trang chủ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Bản đồ</a></li>
-                    <li class="nav-item ms-3"><button class="btn-login">Đăng tin</button></li>
-                </ul>
-            </div>
+{% block content %}
+<div class="map-container">
+    <div id="sidebar" class="p-3">
+        <h5 class="text-primary fw-bold mb-3"><i class="bi bi-search"></i> Bộ Lọc Tìm Kiếm</h5>
+        
+        <div class="mb-3">
+            <label class="fw-bold small">1. Vị trí của bạn (Click bản đồ):</label>
+            <input type="text" class="form-control" id="coords" placeholder="Chưa chọn điểm..." readonly style="background:#f8f9fa; font-size: 0.9rem;">
         </div>
-    </nav>
 
-    <div class="main-container">
-        <div id="sidebar">
-            <div class="search-box">
-                <h5 class="mb-3 text-primary fw-bold">🔍 Bộ Lọc Tìm Kiếm</h5>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">1. Chọn điểm làm việc</label>
-                    <input type="text" class="form-control" id="coords" placeholder="Click bản đồ để chọn..." readonly style="background-color: #e9ecef;">
+        <div class="mb-3">
+            <label class="fw-bold small mb-2">2. Tiêu chí tìm kiếm:</label>
+            <div class="d-flex gap-3 bg-light p-2 rounded border">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="searchMode" id="modeTime" value="time" checked onchange="toggleMode()">
+                    <label class="form-check-label small fw-bold" for="modeTime"><i class="bi bi-clock"></i> Thời gian</label>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">2. Thời gian đi tối đa</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" id="time" value="15" min="5" max="60">
-                        <span class="input-group-text">phút</span>
-                    </div>
-                </div>
-                <button onclick="timKiem()" class="btn-search">TÌM PHÒNG NGAY</button>
-            </div>
-
-            <div id="results-area">
-                <div class="text-center mt-5 text-muted">
-                    <p>Vui lòng chọn vị trí và bấm tìm kiếm.</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="searchMode" id="modeDistance" value="distance" onchange="toggleMode()">
+                    <label class="form-check-label small fw-bold" for="modeDistance"><i class="bi bi-rulers"></i> Khoảng cách</label>
                 </div>
             </div>
         </div>
 
-        <div id="map"></div>
+        <div class="mb-3 p-3 bg-white border rounded">
+            <label class="fw-bold small mb-2 text-primary"><i class="bi bi-sliders"></i> Tùy chọn nâng cao:</label>
+            <select class="form-select mb-2" id="vehicleSelect">
+                <option value="moto" selected>🛵 Xe máy (TB 35km/h)</option>
+                <option value="car">🚗 Ô tô (TB 30km/h)</option>
+                <option value="walk">🚶 Đi bộ (TB 5km/h)</option>
+            </select>
+            <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="rushHourCheck">
+                <label class="form-check-label small text-danger fw-bold" for="rushHourCheck"><i class="bi bi-traffic-cone"></i> Đang giờ cao điểm?</label>
+                <div class="text-muted fst-italic" style="font-size: 0.75rem;">(Trừ hao thời gian kẹt xe)</div>
+            </div>
+        </div>
+
+        <div class="mb-3 p-3 border rounded shadow-sm">
+            <div id="inputTimeGroup">
+                <label class="fw-bold small d-flex justify-content-between"><span>Thời gian tối đa:</span><span class="text-primary fw-bold" id="timeDisplay">15 phút</span></label>
+                <input type="range" class="form-range mt-2" id="inputTime" min="5" max="60" step="5" value="15" oninput="document.getElementById('timeDisplay').innerText = this.value + ' phút'">
+            </div>
+            <div id="inputDistanceGroup" style="display: none;">
+                <label class="fw-bold small d-flex justify-content-between"><span>Bán kính đi:</span><span class="text-danger fw-bold" id="distDisplay">5 km</span></label>
+                <input type="range" class="form-range mt-2" id="inputDist" min="1" max="30" step="1" value="5" oninput="document.getElementById('distDisplay').innerText = this.value + ' km'">
+            </div>
+        </div>
+
+        <button onclick="timKiem()" class="btn btn-primary w-100 fw-bold mb-3 shadow-sm py-2"><i class="bi bi-geo-alt-fill"></i> TÌM KIẾM NGAY</button>
+        <hr>
+        <div id="results-area"><div class="text-center mt-5 text-muted opacity-50"><i class="bi bi-geo-alt" style="font-size: 3rem;"></i><p class="small mt-2">Kết quả sẽ hiện ở đây...</p></div></div>
     </div>
+    <div id="map"></div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    var map = L.map('map').setView([10.7769, 106.7009], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-    <script>
-        var map = L.map('map').setView([10.7769, 106.7009], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    var userMarker=null, isochroneLayer=null, roomMarkers=[], routeLayer=null;
+    var redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/markers-default/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
-        var userMarker = null;
-        var isochroneLayer = null;
-        var roomMarkers = [];
-        var routeLayer = null;
+    function toggleMode() {
+        var mode = document.querySelector('input[name="searchMode"]:checked').value;
+        document.getElementById('inputTimeGroup').style.display = (mode==='time')?'block':'none';
+        document.getElementById('inputDistanceGroup').style.display = (mode==='time')?'none':'block';
+    }
 
-        var redIcon = new L.Icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/markers-default/marker-icon-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-        });
+    map.on('click', function(e) {
+        if (userMarker) map.removeLayer(userMarker);
+        userMarker = L.marker(e.latlng, {icon: redIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>").openPopup();
+        document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
+        if(routeLayer) map.removeLayer(routeLayer);
+    });
 
-        map.on('click', function(e) {
-            if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.marker(e.latlng, {icon: redIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>").openPopup();
-            document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
-            if(routeLayer) map.removeLayer(routeLayer);
-        });
+    function timKiem() {
+        if (!userMarker) { alert("Vui lòng chọn 1 điểm trên bản đồ!"); return; }
+        var mode = document.querySelector('input[name="searchMode"]:checked').value;
+        var val = (mode === 'time') ? document.getElementById('inputTime').value : document.getElementById('inputDist').value;
+        var vehicle = document.getElementById('vehicleSelect').value;
+        var rushHour = document.getElementById('rushHourCheck').checked;
 
-        function timKiem() {
-            var time = document.getElementById('time').value;
-            if (!userMarker) { alert("Vui lòng chọn điểm làm việc trước!"); return; }
+        document.getElementById('results-area').innerHTML = '<div class="text-center mt-3"><div class="spinner-border text-primary"></div><br>Đang tính toán GIS...</div>';
 
-            var btn = document.querySelector('.btn-search');
-            btn.innerHTML = '⏳ Đang tính toán...'; btn.disabled = true;
+        $.ajax({
+            url: '/api/tim-kiem/', type: 'GET',
+            data: { 'lat': userMarker.getLatLng().lat, 'lng': userMarker.getLatLng().lng, 'mode': mode, 'value': val, 'vehicle': vehicle, 'rush_hour': rushHour },
+            success: function(res) {
+                if (isochroneLayer) map.removeLayer(isochroneLayer);
+                if (routeLayer) map.removeLayer(routeLayer);
+                roomMarkers.forEach(m => map.removeLayer(m)); roomMarkers = [];
+                document.getElementById('results-area').innerHTML = "";
 
-            $.ajax({
-                url: '/api/tim-kiem/',
-                data: { 'lat': userMarker.getLatLng().lat, 'lng': userMarker.getLatLng().lng, 'time': time },
-                success: function(res) {
-                    btn.innerHTML = 'TÌM PHÒNG NGAY'; btn.disabled = false;
-                    
-                    if (isochroneLayer) map.removeLayer(isochroneLayer);
-                    if (routeLayer) map.removeLayer(routeLayer);
-                    roomMarkers.forEach(m => map.removeLayer(m));
-                    roomMarkers = [];
-                    document.getElementById('results-area').innerHTML = "";
+                var color = (mode === 'time') ? '#1a237e' : '#d32f2f';
+                isochroneLayer = L.geoJSON(res.polygon, { style: { color: color, weight: 2, opacity: 0.8, fillOpacity: 0.2 } }).addTo(map);
+                map.fitBounds(isochroneLayer.getBounds());
 
-                    isochroneLayer = L.geoJSON(res.polygon, { style: { color: '#1a237e', opacity: 0.6, fillOpacity: 0.2 } }).addTo(map);
-                    map.fitBounds(isochroneLayer.getBounds());
-
-                    if (res.rooms.length === 0) {
-                        document.getElementById('results-area').innerHTML = "<p class='text-center p-3'>Không tìm thấy phòng nào :(</p>";
-                    } else {
-                        document.getElementById('results-area').innerHTML = `<p class='p-2 fw-bold text-success'>🎉 Tìm thấy ${res.rooms.length} phòng:</p>`;
-                        
-                        res.rooms.forEach(room => {
-                            var popupContent = `
-                                <b>${room.ten}</b><br>
-                                <span style="color:red; font-weight:bold">${room.gia.toLocaleString()} đ</span><br>
-                                <div class="d-flex gap-1 mt-2">
-                                    <a href="/phong-tro/${room.id}/" class="btn btn-sm btn-info text-white" target="_blank">📄 Xem</a>
-                                    <button class="btn btn-sm btn-primary" onclick="danDuong(${room.lat}, ${room.lng})">🚗 Đi tới</button>
-                                </div>
-                            `;
-                            var m = L.marker([room.lat, room.lng]).bindPopup(popupContent).addTo(map);
-                            roomMarkers.push(m);
-
-                            var card = `
-                                <div class="room-card">
-                                    <div class="room-info">
-                                        <div class="room-name">${room.ten}</div>
-                                        <div class="room-price">${room.gia.toLocaleString()} VNĐ</div>
-                                        <div class="small text-muted">📍 ${room.dia_chi}</div>
-                                        <div class="mt-2 d-flex justify-content-between">
-                                            <a href="/phong-tro/${room.id}/" target="_blank" class="btn btn-sm btn-outline-info">📄 Chi tiết</a>
-                                            <button onclick="danDuong(${room.lat}, ${room.lng})" class="btn btn-sm btn-outline-danger">🚗 Dẫn đường</button>
-                                        </div>
-                                    </div>
-                                </div>`;
-                            document.getElementById('results-area').innerHTML += card;
-                        });
-                    }
-                },
-                error: function(err) { 
-                    alert("Lỗi kết nối Server! Xem lỗi chi tiết ở màn hình đen."); 
-                    btn.innerHTML = 'TÌM PHÒNG NGAY'; btn.disabled = false; 
+                if (res.rooms.length === 0) {
+                    document.getElementById('results-area').innerHTML = "<p class='text-center p-3 text-muted'>Không tìm thấy phòng nào :(</p>";
+                } else {
+                    var unit = (mode === 'time') ? 'phút' : 'km';
+                    document.getElementById('results-area').innerHTML = `<div class='alert alert-success fw-bold small p-2 mb-2'>🎉 Tìm thấy ${res.rooms.length} phòng (trong ${val} ${unit})</div>`;
+                    res.rooms.forEach(room => {
+                        var giaHienThi = room.gia.toLocaleString('vi-VN') + ' VNĐ';
+                        var imgTag = room.img ? `<img src="${room.img}" style="width:100%; height:100px; object-fit:cover; margin-bottom:5px;">` : '';
+                        var popupContent = `${imgTag}<b>${room.ten}</b><br><span class="text-danger fw-bold">${giaHienThi}</span><br><small>${room.dia_chi}</small><div class="mt-2 d-flex justify-content-between"><a href="/phong-tro/${room.id}/" target="_blank" class="btn btn-sm btn-info text-white">Xem</a> <button class="btn btn-sm btn-primary" onclick="danDuong(${room.lat}, ${room.lng})">Đi tới</button></div>`;
+                        var m = L.marker([room.lat, room.lng]).bindPopup(popupContent).addTo(map);
+                        roomMarkers.push(m);
+                        var card = `<div class="room-card"><div onclick="window.open('/phong-tro/${room.id}/', '_blank')" style="cursor:pointer"><div class="fw-bold text-primary text-truncate">${room.ten}</div><div class="text-danger fw-bold my-1">${giaHienThi}</div><small class="text-muted d-block text-truncate"><i class="bi bi-geo-alt"></i> ${room.dia_chi}</small></div><button class="btn btn-sm btn-light border position-absolute top-0 end-0 m-2" title="Dẫn đường" onclick="danDuong(${room.lat}, ${room.lng})"><i class="bi bi-sign-turn-right-fill text-primary"></i></button></div>`;
+                        document.getElementById('results-area').innerHTML += card;
+                    });
                 }
-            });
-        }
+            }, error: function() { alert("Lỗi kết nối Server!"); document.getElementById('results-area').innerHTML = ""; }
+        });
+    }
 
-        function danDuong(endLat, endLng) {
-            if (!userMarker) return;
-            var startLat = userMarker.getLatLng().lat;
-            var startLng = userMarker.getLatLng().lng;
-            map.closePopup(); 
+    function danDuong(endLat, endLng) {
+        if (!userMarker) { alert("Vui lòng chọn vị trí của bạn trước!"); return; }
+        var startLat = userMarker.getLatLng().lat, startLng = userMarker.getLatLng().lng;
+        var vehicle = document.getElementById('vehicleSelect').value;
+        var rushHour = document.getElementById('rushHourCheck').checked;
 
-            $.ajax({
-                url: '/api/dan-duong/',
-                data: { 'start_lat': startLat, 'start_lng': startLng, 'end_lat': endLat, 'end_lng': endLng },
-                success: function(res) {
-                    if (routeLayer) map.removeLayer(routeLayer);
-                    routeLayer = L.geoJSON(res, { style: { color: 'red', weight: 4, opacity: 0.8, dashArray: '10, 10' } }).addTo(map);
-                    map.fitBounds(routeLayer.getBounds(), {padding: [50, 50]});
-                    var summary = res.features[0].properties.summary;
-                    alert(`🚗 Dẫn đường:\n- Khoảng cách: ${(summary.distance/1000).toFixed(1)} km\n- Thời gian: ${(summary.duration/60).toFixed(0)} phút`);
-                },
-                error: function(err) { alert("Không tìm thấy đường đi!"); }
-            });
-        }
-    </script>
-</body>
-</html>
+        map.closePopup(); 
+        var popupWait = L.popup().setLatLng([(startLat+endLat)/2, (startLng+endLng)/2]).setContent('<div class="text-center">⏳ Đang tìm đường...</div>').openOn(map);
+
+        $.ajax({
+            url: '/api/dan-duong/',
+            data: { 'start_lat': startLat, 'start_lng': startLng, 'end_lat': endLat, 'end_lng': endLng, 'vehicle': vehicle, 'rush_hour': rushHour },
+            success: function(res) {
+                map.closePopup(popupWait);
+                if (routeLayer) map.removeLayer(routeLayer);
+                var routeColor = (vehicle === 'walk') ? '#ff9800' : '#2e7d32';
+                routeLayer = L.geoJSON(res, { style: { color: routeColor, weight: 6, opacity: 0.8 } }).addTo(map);
+                map.fitBounds(routeLayer.getBounds(), {padding: [50, 50]});
+                
+                var summary = res.features[0].properties.summary;
+                var dist = (summary.distance/1000).toFixed(1); 
+                var dur = (summary.duration/60).toFixed(0);      
+                var iconVeh = (vehicle==='walk') ? '🚶' : (vehicle==='moto' ? '🛵' : '🚗');
+                if(rushHour) iconVeh += '🔥'; 
+                
+                L.popup().setLatLng([(startLat+endLat)/2, (startLng+endLng)/2]).setContent(`<div class="text-center"><b>${iconVeh} Lộ trình ${vehicle==='walk'?'đi bộ':'lái xe'}:</b><br><span class="fs-5 fw-bold text-primary">${dur} phút</span><br><small class="text-muted">Quãng đường: ${dist} km</small></div>`).openOn(map);
+            }, error: function() { alert("Không tìm thấy đường đi!"); }
+        });
+    }
+</script>
+{% endblock %}

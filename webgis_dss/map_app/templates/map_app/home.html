@@ -1,108 +1,130 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>SmartRent - Tìm Trọ Thông Minh</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; }
-        
-        /* HEADER & HERO */
-        .navbar { background-color: #1a237e; padding: 15px 0; }
-        .hero-section {
-            background: linear-gradient(rgba(26, 35, 126, 0.8), rgba(26, 35, 126, 0.8)), url('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
-            background-size: cover; background-position: center; color: white; padding: 100px 0; text-align: center;
-        }
-        .search-bar { background: white; padding: 20px; border-radius: 10px; max-width: 800px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        
-        /* CARDS */
-        .room-card { transition: 0.3s; border: none; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 100%; background: white; }
-        .room-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .room-img { height: 200px; object-fit: cover; width: 100%; }
-        .price-tag { color: #d32f2f; font-weight: bold; font-size: 1.2rem; }
-        
-        /* FOOTER */
-        footer { background: #1a237e; color: white; padding: 40px 0; margin-top: 50px; }
-    </style>
-</head>
-<body>
+{% extends 'map_app/base.html' %}
+{% load static %}
 
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-uppercase" href="/">🏠 SmartRent GIS</a>
-            <div class="collapse navbar-collapse justify-content-end">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link active" href="/">Trang chủ</a></li>
-                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="/ban-do/">🗺️ Bản đồ Tìm trọ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Tin tức</a></li>
-                    <li class="nav-item ms-3"><a href="#" class="btn btn-warning text-dark fw-bold">Đăng tin</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+{% block title %}Trang Chủ - Hệ Thống SmartRent{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* CSS Giao diện (Giữ nguyên) */
+    .hero-section { background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1556912173-3db996e16054?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80'); background-size: cover; background-attachment: fixed; color: white; padding: 120px 0; text-align: center; }
+    .search-box-glass { background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; max-width: 800px; margin: 40px auto 0; box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+    .room-card { border: none; border-radius: 12px; overflow: hidden; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%; background: white; position: relative; }
+    .room-card:hover { transform: translateY(-10px); box-shadow: 0 20px 30px rgba(0,0,0,0.15); }
+    .room-img-wrapper { position: relative; height: 220px; overflow: hidden; }
+    .room-img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+    .room-card:hover .room-img { transform: scale(1.1); }
+    .price-badge { position: absolute; bottom: 10px; right: 10px; background: #d32f2f; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .feature-box { padding: 30px; border-radius: 15px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; height: 100%; border-bottom: 4px solid transparent; }
+    .feature-box:hover { transform: translateY(-5px); border-bottom-color: #1a237e; }
+    .icon-circle { width: 70px; height: 70px; background: #e8eaf6; color: #1a237e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 20px; }
+    .stats-section { background: #1a237e; color: white; padding: 60px 0; }
+    .stat-number { font-size: 3rem; font-weight: bold; color: #ffca28; }
+</style>
+{% endblock %}
+
+{% block content %}
     <div class="hero-section">
         <div class="container">
-            <h1 class="display-4 fw-bold mb-3">Tìm Phòng Trọ Thông Minh Với GIS</h1>
-            <p class="lead mb-4">Sử dụng công nghệ bản đồ số để tìm nơi ở phù hợp nhất với vị trí làm việc của bạn.</p>
-            
-            <div class="search-bar mt-4">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md-8">
-                        <input type="text" class="form-control form-control-lg" placeholder="Bạn muốn tìm trọ ở khu vực nào?">
-                    </div>
-                    <div class="col-md-4">
-                        <a href="/ban-do/" class="btn btn-danger btn-lg w-100 fw-bold"><i class="bi bi-map"></i> MỞ BẢN ĐỒ NGAY</a>
-                    </div>
+            <span class="badge bg-warning text-dark mb-3 px-3 py-2 fw-bold">🚀 CÔNG NGHỆ GIS 2026</span>
+            <h1 class="display-3 fw-bold mb-3">Tìm Trọ Thông Minh & Chính Xác</h1>
+            <p class="lead mb-4 opacity-75">Không còn nỗi lo kẹt xe. Tìm phòng trọ dựa trên thời gian di chuyển thực tế.</p>
+            <div class="search-box-glass text-dark text-start">
+                <h5 class="fw-bold mb-3"><i class="bi bi-search"></i> Bạn muốn tìm trọ ở đâu?</h5>
+                <div class="row g-2">
+                    <div class="col-md-9"><a href="{% url 'map_view' %}" class="form-control form-control-lg bg-light border-0 d-flex align-items-center text-muted text-decoration-none">Nhập địa điểm trường học, công ty...</a></div>
+                    <div class="col-md-3"><a href="{% url 'map_view' %}" class="btn btn-danger btn-lg w-100 fw-bold shadow">TÌM KIẾM NGAY</a></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="container mt-5">
-        <h2 class="text-primary fw-bold mb-4 border-start border-5 border-primary ps-3">Phòng Trọ Mới Nhất</h2>
-        
-        <div class="row">
-            {% for phong in rooms %}
-            <div class="col-md-4 mb-4">
-                <div class="card room-card">
-                    {% if phong.hinh_anh %}
-                        <img src="{{ phong.hinh_anh.url }}" class="room-img" alt="{{ phong.ten }}">
-                    {% else %}
-                        <div class="room-img d-flex align-items-center justify-content-center bg-secondary text-white">
-                            <span>Chưa có ảnh</span>
-                        </div>
-                    {% endif %}
-                    
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title fw-bold text-truncate">{{ phong.ten }}</h5>
-                        <p class="price-tag mb-1">{{ phong.gia_thue }} VNĐ/tháng</p>
-                        <p class="card-text text-muted small mb-3"><i class="bi bi-geo-alt-fill"></i> {{ phong.dia_chi }}</p>
-                        <div class="mt-auto d-flex justify-content-between">
-                            <span class="badge bg-info text-dark">{{ phong.dien_tich }} m²</span>
-                            <a href="/phong-tro/{{ phong.id }}/" class="btn btn-sm btn-outline-primary stretched-link">Xem chi tiết</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-                <p class="text-center text-muted">Chưa có phòng trọ nào được đăng.</p>
-            {% endfor %}
-        </div>
-        
-        <div class="text-center mt-4">
-            <a href="/ban-do/" class="btn btn-outline-primary btn-lg">Xem tất cả trên Bản đồ GIS</a>
+    <div class="container py-5">
+        <div class="text-center mb-5"><h2 class="fw-bold text-primary">Tại Sao Chọn SmartRent?</h2></div>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="feature-box"><div class="icon-circle"><i class="bi bi-map-fill"></i></div><h4>Bản Đồ Isochrone</h4><p class="text-muted">Biết chính xác vùng phục vụ theo thời gian.</p></div></div>
+            <div class="col-md-4"><div class="feature-box"><div class="icon-circle"><i class="bi bi-shield-check"></i></div><h4>Thông Tin Xác Thực</h4><p class="text-muted">Dữ liệu phòng trọ được kiểm duyệt kỹ càng.</p></div></div>
+            <div class="col-md-4"><div class="feature-box"><div class="icon-circle"><i class="bi bi-lightning-charge-fill"></i></div><h4>Dẫn Đường Tối Ưu</h4><p class="text-muted">Thuật toán tránh kẹt xe thông minh.</p></div></div>
         </div>
     </div>
 
-    <footer>
-        <div class="container text-center">
-            <p class="mb-0">© 2026 SmartRent - Đồ án WebGIS Sinh viên</p>
-        </div>
-    </footer>
+    <div class="bg-light py-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <h2 class="fw-bold text-dark">Phòng Trọ Mới Nhất 🌟</h2>
+                <a href="{% url 'map_view' %}" class="btn btn-outline-primary fw-bold">Xem bản đồ <i class="bi bi-arrow-right"></i></a>
+            </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+            <div class="row g-4">
+                {% for phong in rooms %}
+                <div class="col-md-4">
+                    <div class="card room-card h-100">
+                        <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm btn-favorite" 
+                                data-id="{{ phong.id }}" 
+                                onclick="toggleFavorite(this)"
+                                style="z-index: 10; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
+                                title="Lưu tin này">
+                            {% if request.user in phong.favorites.all %}
+                                <i class="bi bi-heart-fill text-danger fs-5"></i>
+                            {% else %}
+                                <i class="bi bi-heart text-secondary fs-5"></i>
+                            {% endif %}
+                        </button>
+
+                        <div class="room-img-wrapper">
+                            <a href="{% url 'room_detail' phong.id %}">
+                                {% if phong.hinh_anh %}<img src="{{ phong.hinh_anh.url }}" class="room-img">{% else %}<div class="bg-secondary text-white h-100 d-flex align-items-center justify-content-center"><i class="bi bi-image" style="font-size: 40px;"></i></div>{% endif %}
+                            </a>
+                            <div class="price-badge">{{ phong.gia_thue|floatformat:0 }} đ</div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <a href="{% url 'room_detail' phong.id %}" class="text-decoration-none text-dark"><h5 class="card-title fw-bold text-truncate">{{ phong.ten }}</h5></a>
+                            <p class="text-muted small mb-2 text-truncate"><i class="bi bi-geo-alt-fill text-danger"></i> {{ phong.dia_chi }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="badge bg-light text-dark border"><i class="bi bi-rulers"></i> {{ phong.dien_tich|default:"--" }} m²</span>
+                                <a href="{% url 'room_detail' phong.id %}" class="text-primary fw-bold text-decoration-none small">Xem chi tiết <i class="bi bi-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                    <div class="col-12 text-center py-5"><p class="text-muted">Hiện chưa có phòng nào.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFavorite(btn) {
+            // Lấy ID từ thuộc tính data-id (Cách chuẩn)
+            const roomId = btn.getAttribute('data-id');
+
+            const isUserLoggedIn = "{{ request.user.is_authenticated }}";
+            if (isUserLoggedIn === "False") {
+                alert("Bạn cần đăng nhập để lưu phòng trọ!");
+                window.location.href = "{% url 'login' %}";
+                return;
+            }
+
+            fetch(`/api/toggle-favorite/${roomId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let icon = btn.querySelector('i');
+                    if (data.liked) {
+                        icon.classList.remove('bi-heart', 'text-secondary');
+                        icon.classList.add('bi-heart-fill', 'text-danger');
+                    } else {
+                        icon.classList.remove('bi-heart-fill', 'text-danger');
+                        icon.classList.add('bi-heart', 'text-secondary');
+                    }
+                    btn.style.transform = "scale(1.2)";
+                    setTimeout(() => btn.style.transform = "scale(1)", 200);
+                } else {
+                    alert("Lỗi: " + data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Đăng Nhập{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white fw-bold text-center">🔐 ĐĂNG NHẬP</div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="fw-bold">Tên đăng nhập</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">Mật khẩu</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">ĐĂNG NHẬP</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        Chưa có tài khoản? <a href="{% url 'register' %}" class="fw-bold">Đăng ký ngay</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
