@@ -3,13 +3,12 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
 class DangKyForm(UserCreationForm):
-    email = forms.EmailField(required=True, label="Email") # Bắt buộc nhập Email
+    email = forms.EmailField(required=True, label="Email") 
 
     class Meta:
         model = User
-        fields = ("username", "email") # Chỉ hiện tên đăng nhập và email
+        fields = ("username", "email") 
 
-    # Thêm class CSS của Bootstrap để form đẹp hơn
     def __init__(self, *args, **kwargs):
         super(DangKyForm, self).__init__(*args, **kwargs)
         for field in self.fields:
