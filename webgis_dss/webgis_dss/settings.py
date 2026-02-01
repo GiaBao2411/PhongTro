@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+#
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -117,14 +119,16 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
 
-# --- ĐOẠN CODE CẤU HÌNH GDAL ---
+# --- ĐOẠN CODE CẤU HÌNH GDAL --- chỉnh thành Tự động tìm kiếm thư mục môi trường ảo (Virtual Environment)
 if os.name == 'nt':
-    VENV_BASE = r"C:\Users\ASUS\anaconda3\envs\webgis_env"
+    # Tự động lấy đường dẫn môi trường ảo đang chạy
+    VENV_BASE = sys.prefix 
     
-    os.environ['PATH'] = os.path.join(VENV_BASE, 'Library', 'bin') + ';' + os.environ['PATH']
+    GDAL_BIN = os.path.join(VENV_BASE, 'Library', 'bin')
+    os.environ['PATH'] = GDAL_BIN + ';' + os.environ['PATH']
     
-    # SỬA LẠI DÒNG NÀY: Dùng tên "gdal.dll" chính xác như trong ảnh bạn chụp
-    GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll') 
+    # Trỏ trực tiếp vào file dll trong môi trường hiện tại
+    GDAL_LIBRARY_PATH = os.path.join(GDAL_BIN, 'gdal.dll') 
     
     os.environ['GDAL_DATA'] = os.path.join(VENV_BASE, 'Library', 'share', 'gdal')
     os.environ['PROJ_LIB'] = os.path.join(VENV_BASE, 'Library', 'share', 'proj')
