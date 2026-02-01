@@ -30,6 +30,8 @@ urlpatterns = [
     # News
     path('tin-tuc/', views.news_list, name='news_list'),         
     path('tin-tuc/<int:pk>/', views.news_detail, name='news_detail'),
+
+    path('danh-sach-phong/', views.room_list, name='room_list'),
 ]
 
 if settings.DEBUG:

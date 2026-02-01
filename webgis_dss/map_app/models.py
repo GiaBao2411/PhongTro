@@ -19,9 +19,18 @@ class PhongTro(models.Model):
         return self.ten
 
 class TinTuc(models.Model):
-    tieu_de = models.CharField(max_length=200)
-    noi_dung = models.TextField()
-    ngay_dang = models.DateTimeField(auto_now_add=True)
+    tieu_de = models.CharField(max_length=200, verbose_name="Tiêu đề")
     
+    # --- DÒNG MỚI THÊM VÀO ĐÂY ---
+    hinh_anh = models.ImageField(upload_to='tin_tuc/', blank=True, null=True, verbose_name="Hình ảnh đại diện")
+    # -----------------------------
+    
+    noi_dung = models.TextField(verbose_name="Nội dung")
+    ngay_dang = models.DateTimeField(auto_now_add=True, verbose_name="Ngày đăng")
+    
+    class Meta:
+        verbose_name = "Tin tức"
+        verbose_name_plural = "Quản lý Tin tức"
+
     def __str__(self):
         return self.tieu_de

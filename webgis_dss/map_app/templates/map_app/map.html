@@ -9,6 +9,19 @@
     #map { flex-grow: 1; height: 100%; width: 100%; }
     .room-card { cursor: pointer; border-bottom: 1px solid #eee; padding: 10px; transition: 0.2s; background: #fff; position: relative; }
     .room-card:hover { background-color: #f0f8ff; border-color: #0d6efd; }
+    
+    /* CSS cho icon người dùng */
+    .user-pin-marker { background: transparent; border: none; }
+    .pulse-animation {
+        animation: pulse 2s infinite;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7);
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+    }
 </style>
 {% endblock %}
 
@@ -19,7 +32,10 @@
         
         <div class="mb-3">
             <label class="fw-bold small">1. Vị trí của bạn (Click bản đồ):</label>
-            <input type="text" class="form-control" id="coords" placeholder="Chưa chọn điểm..." readonly style="background:#f8f9fa; font-size: 0.9rem;">
+            <div class="input-group">
+                <input type="text" class="form-control" id="coords" placeholder="Chưa chọn điểm..." readonly style="background:#f8f9fa; font-size: 0.9rem;">
+                <button class="btn btn-outline-secondary" onclick="locateUser()" title="Vị trí hiện tại"><i class="bi bi-crosshair"></i></button>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -76,7 +92,54 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
     var userMarker=null, isochroneLayer=null, roomMarkers=[], routeLayer=null;
-    var redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/markers-default/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+    // --- TẠO ICON CON NGƯỜI (Thay thế icon đỏ cũ) ---
+    var humanIcon = L.divIcon({
+        className: 'user-pin-marker',
+        html: `
+            <div style="position: relative; width: 50px; height: 60px;">
+                <div class="pulse-animation" style="background-color: #d32f2f; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px solid white; position: absolute; left: 5px; top: 0; z-index: 2;">
+                    <i class="bi bi-person-fill" style="color: white; font-size: 24px;"></i>
+                </div>
+                <div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 14px solid #d32f2f; position: absolute; bottom: 10px; left: 17px; z-index: 1;"></div>
+                <div style="width: 20px; height: 4px; background: rgba(0,0,0,0.3); border-radius: 50%; position: absolute; bottom: 8px; left: 15px;"></div>
+            </div>
+        `,
+        iconSize: [50, 60],
+        iconAnchor: [25, 60], // Điểm nhọn nằm đúng vị trí click
+        popupAnchor: [0, -60]
+    });
+
+    // --- TỰ ĐỘNG TÌM KIẾM NẾU CÓ URL ?q=... ---
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('q');
+
+        if (query) {
+            document.getElementById('results-area').innerHTML = `<div class="text-center mt-3"><div class="spinner-border text-primary"></div><br>Đang tìm vị trí: <b>${query}</b>...</div>`;
+            
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Ho Chi Minh City")}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    var lat = parseFloat(data[0].lat);
+                    var lon = parseFloat(data[0].lon);
+                    
+                    if (userMarker) map.removeLayer(userMarker);
+                    // Dùng humanIcon ở đây
+                    userMarker = L.marker([lat, lon], {icon: humanIcon}).addTo(map)
+                        .bindPopup(`<b>${query}</b>`).openPopup();
+                    
+                    map.setView([lat, lon], 14);
+                    document.getElementById('coords').value = lat.toFixed(5) + ", " + lon.toFixed(5);
+                    timKiem();
+                } else {
+                    document.getElementById('results-area').innerHTML = "<p class='text-center text-danger'>Không tìm thấy địa điểm này :(</p>";
+                }
+            })
+            .catch(err => alert("Lỗi định vị địa điểm!"));
+        }
+    });
 
     function toggleMode() {
         var mode = document.querySelector('input[name="searchMode"]:checked').value;
@@ -84,11 +147,21 @@
         document.getElementById('inputDistanceGroup').style.display = (mode==='time')?'none':'block';
     }
 
+    // Click bản đồ -> Hiện icon con người
     map.on('click', function(e) {
         if (userMarker) map.removeLayer(userMarker);
-        userMarker = L.marker(e.latlng, {icon: redIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>").openPopup();
+        userMarker = L.marker(e.latlng, {icon: humanIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>").openPopup();
         document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
         if(routeLayer) map.removeLayer(routeLayer);
+    });
+
+    function locateUser() {
+        map.locate({setView: true, maxZoom: 16});
+    }
+    map.on('locationfound', function(e) {
+        if (userMarker) map.removeLayer(userMarker);
+        userMarker = L.marker(e.latlng, {icon: humanIcon}).addTo(map).bindPopup("<b>Vị trí hiện tại</b>").openPopup();
+        document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
     });
 
     function timKiem() {
@@ -119,7 +192,7 @@
                     var unit = (mode === 'time') ? 'phút' : 'km';
                     document.getElementById('results-area').innerHTML = `<div class='alert alert-success fw-bold small p-2 mb-2'>🎉 Tìm thấy ${res.rooms.length} phòng (trong ${val} ${unit})</div>`;
                     res.rooms.forEach(room => {
-                        var giaHienThi = room.gia.toLocaleString('vi-VN') + ' VNĐ';
+                        var giaHienThi = parseInt(room.gia).toLocaleString('vi-VN') + ' VNĐ';
                         var imgTag = room.img ? `<img src="${room.img}" style="width:100%; height:100px; object-fit:cover; margin-bottom:5px;">` : '';
                         var popupContent = `${imgTag}<b>${room.ten}</b><br><span class="text-danger fw-bold">${giaHienThi}</span><br><small>${room.dia_chi}</small><div class="mt-2 d-flex justify-content-between"><a href="/phong-tro/${room.id}/" target="_blank" class="btn btn-sm btn-info text-white">Xem</a> <button class="btn btn-sm btn-primary" onclick="danDuong(${room.lat}, ${room.lng})">Đi tới</button></div>`;
                         var m = L.marker([room.lat, room.lng]).bindPopup(popupContent).addTo(map);

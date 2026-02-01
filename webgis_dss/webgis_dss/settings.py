@@ -31,14 +31,15 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',                  # <--- Thêm dòng này lên đầu tiên
-    'django.contrib.admin',     # Cái này có sẵn, giữ nguyên
+    'jazzmin',                  
+    'django.contrib.admin',    
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.gis',       # Cái GIS của bạn
+    'django.contrib.gis',      
+    'django.contrib.humanize',
     'map_app',
 ]
 
@@ -78,10 +79,10 @@ WSGI_APPLICATION = "webgis_dss.wsgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis', # Bắt buộc dùng postgis
-        'NAME': 'webgis_db',       # Tên DB bạn vừa tạo bên pgAdmin
-        'USER': 'postgres',        # Tên đăng nhập mặc định
-        'PASSWORD': '123',      # Mật khẩu bạn vừa đặt (Nhớ sửa nếu khác)
+        'ENGINE': 'django.contrib.gis.db.backends.postgis', 
+        'NAME': 'webgis_db',       
+        'USER': 'postgres',        
+        'PASSWORD': '123',      
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -120,20 +121,14 @@ import os
 # --- ĐOẠN CODE CẤU HÌNH GDAL ---
 if os.name == 'nt':
     VENV_BASE = r"C:\Users\ASUS\anaconda3\envs\webgis_env"
-    
     os.environ['PATH'] = os.path.join(VENV_BASE, 'Library', 'bin') + ';' + os.environ['PATH']
-    
-    # SỬA LẠI DÒNG NÀY: Dùng tên "gdal.dll" chính xác như trong ảnh bạn chụp
     GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll') 
-    
     os.environ['GDAL_DATA'] = os.path.join(VENV_BASE, 'Library', 'share', 'gdal')
     os.environ['PROJ_LIB'] = os.path.join(VENV_BASE, 'Library', 'share', 'proj')
 
-# Cấu hình lưu trữ file ảnh
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Cấu hình giao diện Admin (Jazzmin)
 JAZZMIN_SETTINGS = {
     "site_title": "Quản Trị SmartRent",
     "site_header": "SmartRent Admin",

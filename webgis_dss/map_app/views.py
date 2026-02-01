@@ -131,3 +131,8 @@ def news_detail(request, pk):
     item = get_object_or_404(TinTuc, pk=pk)
     related = TinTuc.objects.exclude(pk=pk).order_by('-ngay_dang')[:5]
     return render(request, 'map_app/news_detail.html', {'news': item, 'related_news': related})
+
+def room_list(request):
+    # Lấy tất cả phòng, sắp xếp mới nhất lên đầu
+    all_rooms = PhongTro.objects.all().order_by('-created_at')
+    return render(request, 'map_app/room_list.html', {'rooms': all_rooms})

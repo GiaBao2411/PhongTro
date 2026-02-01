@@ -1,0 +1,107 @@
+{% extends 'map_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tất Cả Phòng Trọ{% endblock %}
+
+{% block content %}
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary">Tất Cả Phòng Trọ Hiện Có</h2>
+            <p class="text-muted">Danh sách {{ rooms|length }} phòng trọ đang cho thuê trên hệ thống.</p>
+        </div>
+
+        <div class="row g-4">
+            {% for phong in rooms %}
+            <div class="col-md-4 col-sm-6">
+                <div class="card room-card h-100 shadow-sm border-0 position-relative">
+                    
+                    <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm btn-favorite" 
+                            data-id="{{ phong.id }}" 
+                            onclick="toggleFavorite(this)"
+                            style="z-index: 10; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
+                            title="Lưu tin này">
+                        {% if request.user in phong.favorites.all %}
+                            <i class="bi bi-heart-fill text-danger fs-5"></i>
+                        {% else %}
+                            <i class="bi bi-heart text-secondary fs-5"></i>
+                        {% endif %}
+                    </button>
+
+                    <div class="room-img-wrapper" style="height: 220px; overflow: hidden; position: relative;">
+                        <a href="{% url 'room_detail' phong.id %}">
+                            {% if phong.hinh_anh %}
+                                <img src="{{ phong.hinh_anh.url }}" class="w-100 h-100" style="object-fit: cover; transition: 0.5s;">
+                            {% else %}
+                                <div class="bg-secondary text-white h-100 d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-image" style="font-size: 40px;"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+                        <div class="position-absolute bottom-0 end-0 m-2 bg-danger text-white px-3 py-1 rounded-pill fw-bold shadow-sm">
+                            {{ phong.gia_thue|floatformat:0 }} đ
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <a href="{% url 'room_detail' phong.id %}" class="text-decoration-none text-dark">
+                            <h5 class="card-title fw-bold text-truncate">{{ phong.ten }}</h5>
+                        </a>
+                        <p class="text-muted small mb-2 text-truncate">
+                            <i class="bi bi-geo-alt-fill text-danger"></i> {{ phong.dia_chi }}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-rulers"></i> {{ phong.dien_tich|default:"--" }} m²
+                            </span>
+                            <a href="{% url 'room_detail' phong.id %}" class="text-primary fw-bold text-decoration-none small">
+                                Xem chi tiết <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">Hiện chưa có phòng nào.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFavorite(btn) {
+        const roomId = btn.getAttribute('data-id');
+        const isUserLoggedIn = "{{ request.user.is_authenticated }}";
+        
+        if (isUserLoggedIn === "False") {
+            alert("Bạn cần đăng nhập để lưu phòng trọ!");
+            window.location.href = "{% url 'login' %}";
+            return;
+        }
+
+        fetch(`/api/toggle-favorite/${roomId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let icon = btn.querySelector('i');
+                if (data.liked) {
+                    icon.classList.remove('bi-heart', 'text-secondary');
+                    icon.classList.add('bi-heart-fill', 'text-danger');
+                } else {
+                    icon.classList.remove('bi-heart-fill', 'text-danger');
+                    icon.classList.add('bi-heart', 'text-secondary');
+                }
+            }
+        });
+    }
+</script>
+
+<style>
+    /* CSS bổ sung cho card đẹp hơn */
+    .room-card:hover { transform: translateY(-5px); }
+    .room-card:hover img { transform: scale(1.1); }
+</style>
+{% endblock %}

@@ -19,6 +19,17 @@
     .icon-circle { width: 70px; height: 70px; background: #e8eaf6; color: #1a237e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 20px; }
     .stats-section { background: #1a237e; color: white; padding: 60px 0; }
     .stat-number { font-size: 3rem; font-weight: bold; color: #ffca28; }
+
+    /* CSS Mới cho phần FAQ */
+    .accordion-button:not(.collapsed) {
+        color: #1a237e;
+        background-color: #e8eaf6;
+        font-weight: bold;
+    }
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: rgba(0,0,0,.125);
+    }
 </style>
 {% endblock %}
 
@@ -28,12 +39,23 @@
             <span class="badge bg-warning text-dark mb-3 px-3 py-2 fw-bold">🚀 CÔNG NGHỆ GIS 2026</span>
             <h1 class="display-3 fw-bold mb-3">Tìm Trọ Thông Minh & Chính Xác</h1>
             <p class="lead mb-4 opacity-75">Không còn nỗi lo kẹt xe. Tìm phòng trọ dựa trên thời gian di chuyển thực tế.</p>
+            
             <div class="search-box-glass text-dark text-start">
                 <h5 class="fw-bold mb-3"><i class="bi bi-search"></i> Bạn muốn tìm trọ ở đâu?</h5>
                 <div class="row g-2">
-                    <div class="col-md-9"><a href="{% url 'map_view' %}" class="form-control form-control-lg bg-light border-0 d-flex align-items-center text-muted text-decoration-none">Nhập địa điểm trường học, công ty...</a></div>
-                    <div class="col-md-3"><a href="{% url 'map_view' %}" class="btn btn-danger btn-lg w-100 fw-bold shadow">TÌM KIẾM NGAY</a></div>
+                    <div class="col-md-9">
+                        <input type="text" id="homeSearchInput" 
+                               class="form-control form-control-lg bg-light border-0" 
+                               placeholder="Nhập địa điểm (Vd: Quận 10, ĐH Bách Khoa)..."
+                               onkeypress="handleEnter(event)">
+                    </div>
+                    <div class="col-md-3">
+                        <button onclick="goToMap()" class="btn btn-danger btn-lg w-100 fw-bold shadow">
+                            TÌM KIẾM NGAY
+                        </button>
+                    </div>
                 </div>
+                <div class="mt-3 small text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> Gợi ý: Quận 1, Bách Khoa, Hàng Xanh...</div>
             </div>
         </div>
     </div>
@@ -94,12 +116,86 @@
         </div>
     </div>
 
-    <script>
-        function toggleFavorite(btn) {
-            // Lấy ID từ thuộc tính data-id (Cách chuẩn)
-            const roomId = btn.getAttribute('data-id');
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary">Câu Hỏi Thường Gặp <i class="bi bi-question-circle-fill"></i></h2>
+            <p class="text-muted">Giải đáp những thắc mắc phổ biến của người dùng</p>
+        </div>
 
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="accordion shadow-sm" id="faqAccordion">
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                1. Tìm trọ theo "Thời gian di chuyển" là gì?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Thay vì tìm theo bán kính (km) không chính xác, hệ thống của chúng tôi tính toán dựa trên <strong>tốc độ thực tế</strong> của xe máy tại TP.HCM. Bạn chỉ cần nhập "15 phút", chúng tôi sẽ vẽ ra vùng bạn có thể đi tới trong 15 phút, giúp bạn chọn trọ không bao giờ lo đi học muộn!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                2. Tôi có mất phí khi tìm phòng trọ không?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                <strong>Hoàn toàn miễn phí!</strong> SmartRent là nền tảng kết nối miễn phí giữa sinh viên và chủ nhà trọ. Bạn có thể tìm kiếm, xem bản đồ và liên hệ chủ nhà mà không tốn bất kỳ chi phí nào.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                3. Làm sao để biết phòng trọ còn trống hay không?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Chúng tôi nỗ lực cập nhật dữ liệu liên tục. Tuy nhiên, để chắc chắn nhất, bạn nên nhấn nút <strong>"Xem chi tiết"</strong> để lấy số điện thoại và gọi điện xác nhận trực tiếp với chủ trọ trước khi đến xem phòng nhé.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
+                                4. Tôi muốn đăng tin cho thuê phòng thì làm sao?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Nếu bạn là chủ trọ, vui lòng liên hệ với Admin qua email hoặc hotline để được hỗ trợ đăng tin xác thực lên bản đồ nhé. Tính năng đăng tin tự động đang được bảo trì để nâng cấp chất lượng.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function goToMap() {
+            var keyword = document.getElementById('homeSearchInput').value;
+            if (keyword.trim() === "") { alert("Vui lòng nhập địa điểm cần tìm!"); return; }
+            window.location.href = "{% url 'map_view' %}?q=" + encodeURIComponent(keyword);
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') goToMap(); }
+
+        function toggleFavorite(btn) {
+            const roomId = btn.getAttribute('data-id');
             const isUserLoggedIn = "{{ request.user.is_authenticated }}";
+            
             if (isUserLoggedIn === "False") {
                 alert("Bạn cần đăng nhập để lưu phòng trọ!");
                 window.location.href = "{% url 'login' %}";
