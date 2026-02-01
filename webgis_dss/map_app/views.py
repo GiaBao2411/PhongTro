@@ -1,31 +1,43 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.gis.geos import GEOSGeometry
-from django.contrib.gis.db.models.functions import Distance
-from .models import PhongTro
-from .forms import DangKyForm
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required # <--- Dòng này sửa lỗi NameError
+from .models import PhongTro, TinTuc
+from .forms import DangKyForm
 import requests
+import json
 
-# API Key ORS
+# API Key OpenRouteService
 ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
 
-# --- VIEWS CƠ BẢN ---
+# ==========================
+# 1. CÁC VIEW HIỂN THỊ HTML
+# ==========================
+
 def home(request):
-    # Lấy 6 phòng mới nhất
     latest_rooms = PhongTro.objects.order_by('-created_at')[:6]
     try: news = TinTuc.objects.order_by('-ngay_dang')[:3]
     except: news = []
     return render(request, 'map_app/home.html', {'rooms': latest_rooms, 'news': news})
 
 def map_view(request):
-    return render(request, 'map_app/map.html')
+    return render(request, 'map_app/map.html') 
 
 def room_detail(request, pk):
     phong = get_object_or_404(PhongTro, pk=pk)
     return render(request, 'map_app/detail.html', {'phong': phong})
 
-# --- API GIS (TÌM KIẾM) ---
+# Danh sách tất cả phòng (Thêm vào cho đủ bộ)
+def room_list(request):
+    all_rooms = PhongTro.objects.all().order_by('-created_at')
+    return render(request, 'map_app/room_list.html', {'rooms': all_rooms})
+
+# ==========================
+# 2. CÁC API XỬ LÝ BẢN ĐỒ
+# ==========================
+
+# API Tìm kiếm thông minh (Isochrone)
 def search_api(request):
     try:
         lat = float(request.GET.get('lat'))
@@ -50,17 +62,27 @@ def search_api(request):
         body = {"locations": [[lng, lat]], "range": [range_val], "range_type": range_type, "attributes": ["area"]}
         
         response = requests.post("https://api.openrouteservice.org/v2/isochrones/driving-car", json=body, headers=headers)
-        data = response.json()
         
+        if response.status_code != 200:
+            return JsonResponse({'error': 'Lỗi API ORS'}, status=400)
+
+        data = response.json()
         if 'features' in data:
             poly = GEOSGeometry(json.dumps(data['features'][0]['geometry']))
             phong_tros = PhongTro.objects.filter(location__within=poly)
-            results = [{'id': p.id, 'ten': p.ten, 'gia': p.gia_thue, 'dia_chi': p.dia_chi, 'lat': p.location.y, 'lng': p.location.x, 'img': p.hinh_anh.url if p.hinh_anh else ""} for p in phong_tros]
+            results = []
+            for p in phong_tros:
+                img_url = p.hinh_anh.url if p.hinh_anh else ""
+                results.append({
+                    'id': p.id, 'ten': p.ten, 'gia': p.gia_thue, 
+                    'dia_chi': p.dia_chi, 'lat': p.location.y, 'lng': p.location.x, 'img': img_url
+                })
             return JsonResponse({'success': True, 'polygon': data, 'rooms': results})
-        return JsonResponse({'error': 'Lỗi API'}, status=400)
+        return JsonResponse({'error': 'Không tìm thấy dữ liệu vùng'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+# API Dẫn đường
 def route_api(request):
     try:
         start_lat = request.GET.get('start_lat')
@@ -83,7 +105,7 @@ def route_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# --- API THẢ TIM ---
+# API Thả tim
 @login_required
 def toggle_favorite(request, pk):
     try:
@@ -98,7 +120,10 @@ def toggle_favorite(request, pk):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-# --- AUTH & USER ---
+# ==========================
+# 3. USER & NEWS
+# ==========================
+
 def register(request):
     if request.method == "POST":
         form = DangKyForm(request.POST)
@@ -106,8 +131,7 @@ def register(request):
             user = form.save()
             login(request, user)
             return redirect('home')
-    else:
-        form = DangKyForm()
+    else: form = DangKyForm()
     return render(request, 'map_app/register.html', {'form': form})
 
 def login_success(request):
@@ -119,11 +143,9 @@ def profile(request):
 
 @login_required
 def saved_rooms(request):
-    # Lấy danh sách thật
     saved_list = request.user.favorite_rooms.all() 
     return render(request, 'map_app/saved_rooms.html', {'rooms': saved_list})
 
-# --- NEWS ---
 def news_list(request):
     return render(request, 'map_app/news_list.html', {'news': TinTuc.objects.order_by('-ngay_dang')})
 
