@@ -2,7 +2,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required # <--- Dòng này sửa lỗi NameError
+from django.contrib.auth.decorators import login_required 
+from .forms import DangKyForm, UserUpdateForm  
+from django.contrib import messages
 from .models import PhongTro, TinTuc
 from .forms import DangKyForm
 import requests
@@ -153,3 +155,19 @@ def news_detail(request, pk):
     item = get_object_or_404(TinTuc, pk=pk)
     related = TinTuc.objects.exclude(pk=pk).order_by('-ngay_dang')[:5]
     return render(request, 'map_app/news_detail.html', {'news': item, 'related_news': related})
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        u_form = UserUpdateForm(request.POST, instance=request.user)
+        if u_form.is_valid():
+            u_form.save()
+            messages.success(request, 'Cập nhật thông tin thành công!')
+            return redirect('profile')
+    else:
+        u_form = UserUpdateForm(instance=request.user)
+
+    context = {
+        'u_form': u_form
+    }
+    return render(request, 'map_app/profile.html', context)

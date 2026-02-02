@@ -1,27 +1,117 @@
 {% extends 'map_app/base.html' %}
-{% block title %}Thông tin tài khoản{% endblock %}
+{% block title %}Hồ sơ của tôi{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow border-0 rounded-4">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
                 <div class="card-body p-5 text-center">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4 shadow" style="width: 100px; height: 100px; font-size: 40px; font-weight: bold;">{{ user.username|first|upper }}</div>
-                    <h3 class="fw-bold mb-1">{{ user.username }}</h3>
-                    <p class="text-muted mb-4">Thành viên SmartRent</p>
-                    <div class="list-group list-group-flush text-start mb-4 shadow-sm rounded">
-                        <div class="list-group-item p-3 d-flex justify-content-between align-items-center"><span><i class="bi bi-envelope-at text-primary me-2"></i> Email</span><span class="fw-bold text-dark">{{ user.email|default:"Chưa cập nhật" }}</span></div>
-                        <div class="list-group-item p-3 d-flex justify-content-between align-items-center"><span><i class="bi bi-calendar-check text-success me-2"></i> Ngày tham gia</span><span class="text-muted">{{ user.date_joined|date:"d/m/Y" }}</span></div>
-                        <div class="list-group-item p-3 d-flex justify-content-between align-items-center"><span><i class="bi bi-person-badge text-warning me-2"></i> Vai trò</span>{% if user.is_superuser %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-info text-dark">Thành viên</span>{% endif %}</div>
+                    
+                    <div class="mb-4">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto fw-bold shadow" 
+                             style="width: 100px; height: 100px; font-size: 2.5rem;">
+                            {{ user.username|first|upper }}
+                        </div>
                     </div>
-                    <div class="d-grid gap-2 col-md-8 mx-auto">
-                        <a href="{% url 'change_password' %}" class="btn btn-outline-primary fw-bold py-2"><i class="bi bi-key-fill"></i> Đổi mật khẩu</a>
-                        <a href="{% url 'saved_rooms' %}" class="btn btn-outline-danger fw-bold py-2"><i class="bi bi-heart-fill"></i> Xem phòng yêu thích</a>
-                        <a href="{% url 'home' %}" class="btn btn-light text-muted">Quay về trang chủ</a>
+
+                    <h3 class="fw-bold mb-1">{{ user.last_name }} {{ user.first_name }}</h3>
+                    <p class="text-muted mb-4">@{{ user.username }}</p>
+
+                    <div class="text-start bg-light p-4 rounded-3 mb-4">
+                        <div class="mb-3 border-bottom pb-2">
+                            <label class="small text-muted fw-bold text-uppercase">Email</label>
+                            <div class="fw-medium text-dark">{{ user.email|default:"Chưa cập nhật" }}</div>
+                        </div>
+                        <div class="mb-3 border-bottom pb-2">
+                            <label class="small text-muted fw-bold text-uppercase">Họ và Tên</label>
+                            <div class="fw-medium text-dark">
+                                {% if user.first_name or user.last_name %}
+                                    {{ user.last_name }} {{ user.first_name }}
+                                {% else %}
+                                    <span class="text-warning small"><i class="bi bi-exclamation-circle"></i> Chưa cập nhật</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="small text-muted fw-bold text-uppercase">Ngày tham gia</label>
+                            <div class="fw-medium text-dark">{{ user.date_joined|date:"d/m/Y" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil-square me-2"></i> Cập nhật thông tin
+                        </button>
+
+                        <a href="{% url 'change_password' %}" class="btn btn-outline-primary fw-bold">
+                            <i class="bi bi-key me-2"></i> Đổi mật khẩu
+                        </a>
+                        
+                        <a href="{% url 'saved_rooms' %}" class="btn btn-outline-danger fw-bold">
+                            <i class="bi bi-heart-fill me-2"></i> Xem phòng yêu thích
+                        </a>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'home' %}" class="text-decoration-none text-muted small hover-link">
+                            <i class="bi bi-arrow-left me-1"></i> Quay về trang chủ
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Cập nhật hồ sơ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">Họ</label>
+                            {{ u_form.last_name }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">Tên</label>
+                            {{ u_form.first_name }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">Email</label>
+                            {{ u_form.email }}
+                            <div class="form-text text-muted small">Chúng tôi sẽ gửi thông báo quan trọng qua email này.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary fw-bold">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+            <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle-fill me-2"></i> {{ message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
 {% endblock %}
