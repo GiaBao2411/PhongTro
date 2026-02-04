@@ -3,24 +3,24 @@ from django.http import JsonResponse
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required 
-from .forms import DangKyForm, UserUpdateForm  
 from django.contrib import messages
-from .models import PhongTro, TinTuc
-from .forms import DangKyForm
 import requests
 import json
+from .forms import DangKyForm, UserUpdateForm
+from .models import PhongTro, TinTuc, DonDatPhong
 
-# API Key OpenRouteService
 ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
 
-# ==========================
-# 1. CÁC VIEW HIỂN THỊ HTML
-# ==========================
-
 def home(request):
-    latest_rooms = PhongTro.objects.order_by('-created_at')[:6]
-    try: news = TinTuc.objects.order_by('-ngay_dang')[:3]
-    except: news = []
+    trang_thai_ban = ['cho_xac_nhan', 'cho_duyet', 'thanh_cong']
+    
+    latest_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=trang_thai_ban)[:3]
+    
+    try: 
+        news = TinTuc.objects.order_by('-ngay_dang')[:3]
+    except: 
+        news = []
+    
     return render(request, 'map_app/home.html', {'rooms': latest_rooms, 'news': news})
 
 def map_view(request):
@@ -30,16 +30,23 @@ def room_detail(request, pk):
     phong = get_object_or_404(PhongTro, pk=pk)
     return render(request, 'map_app/detail.html', {'phong': phong})
 
-# Danh sách tất cả phòng (Thêm vào cho đủ bộ)
 def room_list(request):
-    all_rooms = PhongTro.objects.all().order_by('-created_at')
+    trang_thai_ban = ['cho_xac_nhan', 'cho_duyet', 'thanh_cong']
+    all_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=trang_thai_ban).order_by('-created_at')
     return render(request, 'map_app/room_list.html', {'rooms': all_rooms})
 
-# ==========================
-# 2. CÁC API XỬ LÝ BẢN ĐỒ
-# ==========================
+def guide(request):
+    return render(request, 'map_app/pages/guide.html')
 
-# API Tìm kiếm thông minh (Isochrone)
+def privacy(request):
+    return render(request, 'map_app/pages/privacy.html')
+
+def complaint(request):
+    return render(request, 'map_app/pages/complaint.html')
+
+def faq(request):
+    return render(request, 'map_app/pages/faq.html')
+
 def search_api(request):
     try:
         lat = float(request.GET.get('lat'))
@@ -71,7 +78,10 @@ def search_api(request):
         data = response.json()
         if 'features' in data:
             poly = GEOSGeometry(json.dumps(data['features'][0]['geometry']))
-            phong_tros = PhongTro.objects.filter(location__within=poly)
+            
+            trang_thai_ban = ['cho_xac_nhan', 'cho_duyet', 'thanh_cong']
+            phong_tros = PhongTro.objects.filter(location__within=poly).exclude(dondatphong__trang_thai__in=trang_thai_ban)
+            
             results = []
             for p in phong_tros:
                 img_url = p.hinh_anh.url if p.hinh_anh else ""
@@ -84,7 +94,6 @@ def search_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# API Dẫn đường
 def route_api(request):
     try:
         start_lat = request.GET.get('start_lat')
@@ -107,7 +116,6 @@ def route_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# API Thả tim
 @login_required
 def toggle_favorite(request, pk):
     try:
@@ -122,10 +130,6 @@ def toggle_favorite(request, pk):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-# ==========================
-# 3. USER & NEWS
-# ==========================
-
 def register(request):
     if request.method == "POST":
         form = DangKyForm(request.POST)
@@ -138,10 +142,6 @@ def register(request):
 
 def login_success(request):
     return redirect('/admin/') if request.user.is_superuser else redirect('home')
-
-@login_required
-def profile(request):
-    return render(request, 'map_app/profile.html')
 
 @login_required
 def saved_rooms(request):
@@ -171,3 +171,42 @@ def profile(request):
         'u_form': u_form
     }
     return render(request, 'map_app/profile.html', context)
+
+@login_required
+def xac_nhan_dat_phong(request, room_id):
+    phong = get_object_or_404(PhongTro, id=room_id)
+    dang_ban = DonDatPhong.objects.filter(phong=phong).exclude(trang_thai='huy').exists()
+    if dang_ban:
+        messages.warning(request, "⚠️ Chậm chân rồi! Phòng này vừa có người khác đặt giữ chỗ.")
+        return redirect('home')
+    if request.method == 'POST':
+        ngay_don = request.POST.get('ngay_don_vao')
+        loi_nhan = request.POST.get('loi_nhan')  
+        don_moi = DonDatPhong.objects.create(
+            nguoi_thue=request.user,
+            phong=phong,
+            ngay_don_vao=ngay_don,
+            tien_coc=phong.gia_thue,
+            ghi_chu=loi_nhan,
+            trang_thai='cho_xac_nhan'
+        )
+        return redirect('thanh_toan', don_id=don_moi.id) 
+    return render(request, 'map_app/booking.html', {'phong': phong})
+
+@login_required
+def thanh_toan(request, don_id):
+    don = get_object_or_404(DonDatPhong, id=don_id, nguoi_thue=request.user)
+    if request.method == 'POST':
+        don.trang_thai = 'cho_duyet' 
+        don.save()
+        messages.success(request, "Đã gửi xác nhận! Admin sẽ liên hệ bạn sớm.")
+        return redirect('home')
+    noi_dung_ck = f"DAT COC PHONG {don.phong.id}"
+    qr_url = f"https://img.vietqr.io/image/Sacombank-060308333003-compact.jpg?amount={int(don.tien_coc)}&addInfo={noi_dung_ck}&accountName=CHU_TRO"
+    return render(request, 'map_app/payment.html', {'don': don, 'qr_url': qr_url})
+
+@login_required
+def booking_history(request):
+    history = DonDatPhong.objects.filter(nguoi_thue=request.user).order_by('-ngay_tao')
+    
+    return render(request, 'map_app/booking_history.html', {'history': history})

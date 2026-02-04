@@ -34,3 +34,22 @@ class TinTuc(models.Model):
 
     def __str__(self):
         return self.tieu_de
+
+class DonDatPhong(models.Model):
+    TRANG_THAI_CHOICES = [
+        ('cho_xac_nhan', '⏳ Chờ xác nhận'),
+        ('da_coc', '✅ Đã đặt cọc'),
+        ('huy', '❌ Đã hủy'),
+    ]
+
+    nguoi_thue = models.ForeignKey(User, on_delete=models.CASCADE)
+    phong = models.ForeignKey(PhongTro, on_delete=models.CASCADE)
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_don_vao = models.DateField(verbose_name="Ngày dự kiến dọn vào")
+    tien_coc = models.DecimalField(max_digits=10, decimal_places=0)
+    
+    trang_thai = models.CharField(max_length=20, choices=TRANG_THAI_CHOICES, default='cho_xac_nhan')
+    ghi_chu = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.nguoi_thue.username} đặt {self.phong.ten}"

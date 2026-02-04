@@ -5,8 +5,7 @@
 
 {% block extra_css %}
 <style>
-    /* CSS Giao diện (Giữ nguyên) */
-    .hero-section { background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1556912173-3db996e16054?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80'); background-size: cover; background-attachment: fixed; color: white; padding: 120px 0; text-align: center; }
+    .hero-section { background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('{% static "images/banner.jpg" %}'); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 100px 0; color: white; text-align: center; margin-bottom: 30px; position: relative; }
     .search-box-glass { background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; max-width: 800px; margin: 40px auto 0; box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
     .room-card { border: none; border-radius: 12px; overflow: hidden; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%; background: white; position: relative; }
     .room-card:hover { transform: translateY(-10px); box-shadow: 0 20px 30px rgba(0,0,0,0.15); }
@@ -73,7 +72,7 @@
         <div class="container">
             <div class="d-flex justify-content-between align-items-end mb-4">
                 <h2 class="fw-bold text-dark">Phòng Trọ Mới Nhất 🌟</h2>
-                <a href="{% url 'map_view' %}" class="btn btn-outline-primary fw-bold">Xem bản đồ <i class="bi bi-arrow-right"></i></a>
+                <a href="{% url 'room_list' %}" class="btn btn-outline-primary btn-sm fw-bold">Tất cả phòng trọ <i class="bi bi-arrow-right"></i></a>
             </div>
 
             <div class="row g-4">

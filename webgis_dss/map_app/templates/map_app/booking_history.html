@@ -1,0 +1,83 @@
+{% extends 'map_app/base.html' %}
+{% load humanize %}
+
+{% block title %}Lịch sử đặt phòng{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-clock-history me-2"></i>Lịch sử đặt phòng</h3>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-0">
+            {% if history %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-secondary">
+                        <tr>
+                            <th class="py-3 ps-4">Phòng trọ</th>
+                            <th class="py-3">Ngày dự kiến vào</th>
+                            <th class="py-3">Tiền cọc</th>
+                            <th class="py-3">Trạng thái</th>
+                            <th class="py-3">Ngày đặt đơn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in history %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    {% if item.phong.hinh_anh %}
+                                        <img src="{{ item.phong.hinh_anh.url }}" class="rounded-3 object-fit-cover me-3" width="60" height="60">
+                                    {% else %}
+                                        <div class="bg-secondary bg-opacity-10 rounded-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-house-door text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="mb-1 fw-bold text-dark">{{ item.phong.ten }}</h6>
+                                        <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ item.phong.dia_chi|truncatechars:30 }}</small>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="text-primary fw-medium">{{ item.ngay_don_vao|date:"d/m/Y" }}</td>
+
+                            <td class="fw-bold text-danger">{{ item.tien_coc|intcomma }} đ</td>
+
+                            <td>
+                                {% if item.trang_thai == 'cho_xac_nhan' %}
+                                    <span class="badge bg-warning text-dark bg-opacity-25 px-3 py-2 rounded-pill border border-warning">
+                                        ⏳ Chờ xác nhận
+                                    </span>
+                                {% elif item.trang_thai == 'cho_duyet' %}
+                                    <span class="badge bg-info text-dark bg-opacity-25 px-3 py-2 rounded-pill border border-info">
+                                        💸 Chờ Admin duyệt
+                                    </span>
+                                {% elif item.trang_thai == 'thanh_cong' %}
+                                    <span class="badge bg-success bg-opacity-25 text-success px-3 py-2 rounded-pill border border-success">
+                                        ✅ Đặt thành công
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger bg-opacity-25 text-danger px-3 py-2 rounded-pill border border-danger">
+                                        ❌ Đã hủy
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-muted small">{{ item.ngay_tao|date:"H:i - d/m/Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-clipboard-x display-1 text-muted opacity-25"></i>
+                    <p class="mt-3 text-muted">Bạn chưa đặt phòng trọ nào cả.</p>
+                    <a href="{% url 'map_view' %}" class="btn btn-primary fw-bold">Tìm phòng ngay</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

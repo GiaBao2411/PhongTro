@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.gis',      
     'django.contrib.humanize',
+    'leaflet',
     'map_app',
 ]
 
@@ -144,6 +145,9 @@ JAZZMIN_SETTINGS = {
     "search_model": "auth.User",
 }
 
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 LOGIN_REDIRECT_URL = 'login_success' 
 LOGOUT_REDIRECT_URL = 'home'         
