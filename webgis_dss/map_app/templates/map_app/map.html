@@ -9,8 +9,6 @@
     #map { flex-grow: 1; height: 100%; width: 100%; }
     .room-card { cursor: pointer; border-bottom: 1px solid #eee; padding: 10px; transition: 0.2s; background: #fff; position: relative; }
     .room-card:hover { background-color: #f0f8ff; border-color: #0d6efd; }
-    
-    /* CSS cho icon người dùng */
     .user-pin-marker { background: transparent; border: none; }
     .pulse-animation {
         animation: pulse 2s infinite;
@@ -93,7 +91,6 @@
 
     var userMarker=null, isochroneLayer=null, roomMarkers=[], routeLayer=null;
 
-    // --- TẠO ICON CON NGƯỜI (Thay thế icon đỏ cũ) ---
     var humanIcon = L.divIcon({
         className: 'user-pin-marker',
         html: `
@@ -106,11 +103,10 @@
             </div>
         `,
         iconSize: [50, 60],
-        iconAnchor: [25, 60], // Điểm nhọn nằm đúng vị trí click
+        iconAnchor: [25, 60], 
         popupAnchor: [0, -60]
     });
 
-    // --- TỰ ĐỘNG TÌM KIẾM NẾU CÓ URL ?q=... ---
     $(document).ready(function() {
         const urlParams = new URLSearchParams(window.location.search);
         const query = urlParams.get('q');
@@ -126,7 +122,6 @@
                     var lon = parseFloat(data[0].lon);
                     
                     if (userMarker) map.removeLayer(userMarker);
-                    // Dùng humanIcon ở đây
                     userMarker = L.marker([lat, lon], {icon: humanIcon}).addTo(map)
                         .bindPopup(`<b>${query}</b>`).openPopup();
                     
@@ -146,8 +141,6 @@
         document.getElementById('inputTimeGroup').style.display = (mode==='time')?'block':'none';
         document.getElementById('inputDistanceGroup').style.display = (mode==='time')?'none':'block';
     }
-
-    // Click bản đồ -> Hiện icon con người
     map.on('click', function(e) {
         if (userMarker) map.removeLayer(userMarker);
         userMarker = L.marker(e.latlng, {icon: humanIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>").openPopup();

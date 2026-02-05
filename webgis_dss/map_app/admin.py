@@ -41,10 +41,8 @@ class TinTucAdmin(admin.ModelAdmin):
 
 def duyet_don_hang(modeladmin, request, queryset):
     for don in queryset:
-        # 1. Cập nhật trạng thái đơn
         don.trang_thai = 'thanh_cong'
         don.save()
-        # 2. (Tùy chọn) Có thể đánh dấu phòng là "Đã thuê" tại đây nếu muốn
     
     modeladmin.message_user(request, "Đã duyệt các đơn được chọn thành công!")
 

@@ -80,10 +80,8 @@
 
 <script>
     function toggleDetailFavorite(btn) {
-        // 1. Lấy ID từ data-id (Không bị lỗi cú pháp nữa)
         const roomId = btn.getAttribute('data-id');
 
-        // 2. Kiểm tra đăng nhập
         const isUserLoggedIn = "{{ request.user.is_authenticated }}";
         if (isUserLoggedIn === "False") {
             alert("Bạn cần đăng nhập để lưu phòng trọ!");
@@ -91,7 +89,6 @@
             return;
         }
 
-        // 3. Gọi API
         fetch(`/api/toggle-favorite/${roomId}/`)
         .then(response => response.json())
         .then(data => {
@@ -99,12 +96,10 @@
                 let icon = btn.querySelector('i');
                 
                 if (data.liked) {
-                    // Đã thích
                     btn.classList.remove('btn-outline-danger');
                     btn.classList.add('btn-danger');
                     btn.innerHTML = '<i class="bi bi-heart-fill me-1"></i> Đã yêu thích';
                 } else {
-                    // Bỏ thích
                     btn.classList.remove('btn-danger');
                     btn.classList.add('btn-outline-danger');
                     btn.innerHTML = '<i class="bi bi-heart me-1"></i> Yêu thích';

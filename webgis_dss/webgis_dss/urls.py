@@ -20,10 +20,7 @@ urlpatterns = [
     path('login-success/', views.login_success, name='login_success'),
     path('tai-khoan/', views.profile, name='profile'),
     path('phong-da-luu/', views.saved_rooms, name='saved_rooms'),
-    path('doi-mat-khau/', auth_views.PasswordChangeView.as_view(
-        template_name='map_app/change_password.html',
-        success_url='/tai-khoan/'
-    ), name='change_password'),
+    path('doi-mat-khau/', auth_views.PasswordChangeView.as_view(template_name='map_app/change_password.html', success_url='/tai-khoan/'), name='change_password'),
     path('tin-tuc/', views.news_list, name='news_list'),         
     path('tin-tuc/<int:pk>/', views.news_detail, name='news_detail'),
     path('dat-phong/<int:room_id>/', views.xac_nhan_dat_phong, name='dat_phong'),

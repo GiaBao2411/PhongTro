@@ -120,14 +120,11 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
-
-# --- ĐOẠN CODE CẤU HÌNH GDAL --- chỉnh thành Tự động tìm kiếm thư mục môi trường ảo (Virtual Environment)
 if os.name == 'nt':
     VENV_BASE = r"C:\Users\ASUS\anaconda3\envs\webgis_env"
     
     os.environ['PATH'] = os.path.join(VENV_BASE, 'Library', 'bin') + ';' + os.environ['PATH']
     
-    # SỬA LẠI DÒNG NÀY: Dùng tên "gdal.dll" chính xác như trong ảnh bạn chụp
     GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll') 
     
     os.environ['GDAL_DATA'] = os.path.join(VENV_BASE, 'Library', 'share', 'gdal')

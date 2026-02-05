@@ -11,8 +11,6 @@ class PhongTro(models.Model):
     hinh_anh = models.ImageField(upload_to='phong_tro/', blank=True, null=True)
     mo_ta = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    # Trường lưu danh sách người thích
     favorites = models.ManyToManyField(User, related_name='favorite_rooms', blank=True)
 
     def __str__(self):
@@ -20,11 +18,7 @@ class PhongTro(models.Model):
 
 class TinTuc(models.Model):
     tieu_de = models.CharField(max_length=200, verbose_name="Tiêu đề")
-    
-    # --- DÒNG MỚI THÊM VÀO ĐÂY ---
     hinh_anh = models.ImageField(upload_to='tin_tuc/', blank=True, null=True, verbose_name="Hình ảnh đại diện")
-    # -----------------------------
-    
     noi_dung = models.TextField(verbose_name="Nội dung")
     ngay_dang = models.DateTimeField(auto_now_add=True, verbose_name="Ngày đăng")
     
@@ -38,7 +32,7 @@ class TinTuc(models.Model):
 class DonDatPhong(models.Model):
     TRANG_THAI_CHOICES = [
         ('cho_xac_nhan', '⏳ Chờ xác nhận'),
-        ('da_coc', '✅ Đã đặt cọc'),
+        ('da_dat_coc', '✅ Đã đặt cọc'),
         ('huy', '❌ Đã hủy'),
     ]
 

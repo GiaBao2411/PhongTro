@@ -11,10 +11,13 @@ from .models import PhongTro, TinTuc, DonDatPhong
 
 ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
 
+BUSY_STATUS = [
+    'cho_xac_nhan', 'cho_duyet', 'thanh_cong', 'confirmed', 
+    'da_dat_coc', 'da_coc', 'success', 'pending'
+]
+
 def home(request):
-    trang_thai_ban = ['cho_xac_nhan', 'cho_duyet', 'thanh_cong']
-    
-    latest_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=trang_thai_ban)[:3]
+    latest_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=BUSY_STATUS).order_by('-created_at')[:3]
     
     try: 
         news = TinTuc.objects.order_by('-ngay_dang')[:3]
@@ -24,15 +27,16 @@ def home(request):
     return render(request, 'map_app/home.html', {'rooms': latest_rooms, 'news': news})
 
 def map_view(request):
-    return render(request, 'map_app/map.html') 
+    rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=BUSY_STATUS)
+    return render(request, 'map_app/map.html', {'rooms': rooms}) 
 
 def room_detail(request, pk):
     phong = get_object_or_404(PhongTro, pk=pk)
-    return render(request, 'map_app/detail.html', {'phong': phong})
+    is_booked = DonDatPhong.objects.filter(phong=phong, trang_thai__in=BUSY_STATUS).exists()
+    return render(request, 'map_app/detail.html', {'phong': phong, 'is_booked': is_booked})
 
 def room_list(request):
-    trang_thai_ban = ['cho_xac_nhan', 'cho_duyet', 'thanh_cong']
-    all_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=trang_thai_ban).order_by('-created_at')
+    all_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=BUSY_STATUS).order_by('-created_at')
     return render(request, 'map_app/room_list.html', {'rooms': all_rooms})
 
 def guide(request):
@@ -79,8 +83,7 @@ def search_api(request):
         if 'features' in data:
             poly = GEOSGeometry(json.dumps(data['features'][0]['geometry']))
             
-            trang_thai_ban = ['cho_xac_nhan', 'cho_duyet', 'thanh_cong']
-            phong_tros = PhongTro.objects.filter(location__within=poly).exclude(dondatphong__trang_thai__in=trang_thai_ban)
+            phong_tros = PhongTro.objects.filter(location__within=poly).exclude(dondatphong__trang_thai__in=BUSY_STATUS)
             
             results = []
             for p in phong_tros:
@@ -148,14 +151,6 @@ def saved_rooms(request):
     saved_list = request.user.favorite_rooms.all() 
     return render(request, 'map_app/saved_rooms.html', {'rooms': saved_list})
 
-def news_list(request):
-    return render(request, 'map_app/news_list.html', {'news': TinTuc.objects.order_by('-ngay_dang')})
-
-def news_detail(request, pk):
-    item = get_object_or_404(TinTuc, pk=pk)
-    related = TinTuc.objects.exclude(pk=pk).order_by('-ngay_dang')[:5]
-    return render(request, 'map_app/news_detail.html', {'news': item, 'related_news': related})
-
 @login_required
 def profile(request):
     if request.method == 'POST':
@@ -172,13 +167,24 @@ def profile(request):
     }
     return render(request, 'map_app/profile.html', context)
 
+def news_list(request):
+    return render(request, 'map_app/news_list.html', {'news': TinTuc.objects.order_by('-ngay_dang')})
+
+def news_detail(request, pk):
+    item = get_object_or_404(TinTuc, pk=pk)
+    related = TinTuc.objects.exclude(pk=pk).order_by('-ngay_dang')[:5]
+    return render(request, 'map_app/news_detail.html', {'news': item, 'related_news': related})
+
 @login_required
 def xac_nhan_dat_phong(request, room_id):
     phong = get_object_or_404(PhongTro, id=room_id)
-    dang_ban = DonDatPhong.objects.filter(phong=phong).exclude(trang_thai='huy').exists()
+    
+    dang_ban = DonDatPhong.objects.filter(phong=phong, trang_thai__in=BUSY_STATUS).exists()
+    
     if dang_ban:
         messages.warning(request, "⚠️ Chậm chân rồi! Phòng này vừa có người khác đặt giữ chỗ.")
         return redirect('home')
+        
     if request.method == 'POST':
         ngay_don = request.POST.get('ngay_don_vao')
         loi_nhan = request.POST.get('loi_nhan')  
@@ -208,5 +214,4 @@ def thanh_toan(request, don_id):
 @login_required
 def booking_history(request):
     history = DonDatPhong.objects.filter(nguoi_thue=request.user).order_by('-ngay_tao')
-    
     return render(request, 'map_app/booking_history.html', {'history': history})

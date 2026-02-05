@@ -50,7 +50,7 @@
 
 <script>
     function toggleFavorite(btn) {
-        const roomId = btn.getAttribute('data-id'); // Lấy ID chuẩn
+        const roomId = btn.getAttribute('data-id'); 
 
         if (!confirm('Bạn có chắc muốn xóa phòng này khỏi danh sách yêu thích?')) return;
 
@@ -58,7 +58,6 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // Xóa thành công thì load lại trang để mất cái card đi
                 location.reload();
             }
         })
