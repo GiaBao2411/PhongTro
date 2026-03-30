@@ -1,0 +1,217 @@
+{% extends 'map_app/admin_custom/admin_base.html' %}
+{% block title %}{{ action }} Phòng Trọ{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* Style cho khu vực ảnh chi tiết */
+    .gallery-upload-box {
+        border: 2px dashed #ddd;
+        border-radius: 12px;
+        padding: 20px;
+        background: #fafafa;
+        transition: 0.3s;
+    }
+    .gallery-upload-box:hover {
+        border-color: #0d6efd;
+        background: #f0f8ff;
+    }
+    .preview-image-managed {
+        width: 90px;
+        height: 90px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid #fff;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        transition: 0.2s;
+    }
+    .preview-image-managed:hover {
+        transform: scale(1.05);
+    }
+    /* Viền xanh cho ảnh mới sắp tải lên */
+    .new-upload-preview {
+        border-color: #198754 !important; 
+    }
+</style>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-house-door-fill"></i> {{ action }} Phòng Trọ</h4>
+        <small class="text-muted">Quản lý Phòng trọ > {{ action }}</small>
+    </div>
+    <a href="{% url 'custom_admin_phongtro' %}" class="btn btn-outline-secondary fw-bold px-3 rounded-pill">
+        <i class="bi bi-arrow-left"></i> Quay lại danh sách
+    </a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-uppercase text-muted mb-3">Thông tin cơ bản</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên phòng trọ</label>
+                        <input type="text" name="ten" class="form-control" value="{{ phong.ten }}" placeholder="VD: Phòng trọ cao cấp Quận 1" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Giá thuê (VNĐ/tháng)</label>
+                            <input type="number" name="gia_thue" class="form-control" value="{{ phong.gia_thue|floatformat:0 }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Diện tích (m²)</label>
+                            <input type="number" name="dien_tich" class="form-control" value="{{ phong.dien_tich|floatformat:0 }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Địa chỉ chi tiết</label>
+                        <textarea name="dia_chi" class="form-control" rows="2" placeholder="Số nhà, đường, phường, quận..." required>{{ phong.dia_chi }}</textarea>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-image"></i> Ảnh đại diện </h6>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Tấm ảnh này sẽ hiển thị ở các danh sách thu nhỏ ngoài trang chủ.</label>
+                        <input type="file" name="hinh_anh" class="form-control" accept="image/*" {% if not phong %}required{% endif %}>
+                        
+                        {% if phong and phong.hinh_anh %}
+                            <div class="mt-3 p-2 border rounded-3 bg-light d-inline-block">
+                                <span class="small fst-italic text-muted d-block mb-1">Ảnh đại diện hiện tại:</span>
+                                <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed" title="Ảnh đại diện">
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-success fw-bold px-4 py-3 mt-2 w-100 rounded-3 shadow">
+                <i class="bi bi-save me-1"></i> HOÀN TẤT VÀ LƯU PHÒNG TRỌ
+            </button>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-uppercase text-danger mb-3"><i class="bi bi-geo-alt-fill"></i> Tọa độ bản đồ (GIS)</h6>
+                    <label class="form-label small text-muted mb-2">Nhấp chuột vào bản đồ để ghim vị trí chính xác của phòng trọ.</label>
+                    <div id="map" style="height: 300px; border-radius: 12px; border: 2px solid #ddd;"></div>
+                    
+                    <input type="hidden" name="lat" id="input_lat" value="{{ phong.location.y|default:'' }}">
+                    <input type="hidden" name="lng" id="input_lng" value="{{ phong.location.x|default:'' }}">
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-uppercase text-success mb-3"><i class="bi bi-images"></i> Ảnh chi tiết </h6>
+                    <label class="form-label small text-muted mb-3">Tải lên các ảnh chi tiết bên trong: Nhà vệ sinh, 2 phòng ngủ, bếp, chỗ để xe...</label>
+
+                    <div class="gallery-upload-box mb-3 text-center">
+                        <i class="bi bi-cloud-arrow-up-fill text-muted" style="font-size: 3rem;"></i>
+                        <input type="file" name="hinh_anh_phu" id="hinh_anh_phu" class="form-control mt-3" accept="image/*" multiple onchange="hienThiThumbnailDetail()">
+                        <small class="text-muted d-block mt-2">Nhấn đè phím <b>Ctrl</b> khi chọn để tải lên nhiều ảnh.</small>
+                    </div>
+
+                    {% if phong.danh_sach_anh.all %}
+                    <div class="mt-4">
+                        <span class="small fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Ảnh chi tiết đang có sẵn:</span>
+                        <div class="d-flex flex-wrap gap-3 mt-2">
+                            {% for anh in phong.danh_sach_anh.all %}
+                                <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh chi tiết cũ">
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4" id="vung_chua_preview_detail" style="display: none;">
+                        <span class="small fw-bold text-danger"><i class="bi bi-arrow-up-circle-fill"></i> Ảnh mới sắp tải lên:</span>
+                        <div id="image_preview_detail" class="d-flex flex-wrap gap-3 mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<script>
+    var defaultLat = 10.7769; 
+    var defaultLng = 106.7009;
+    var zoomLevel = 13;
+    var isEdit = "{{ phong.location.y|default:'' }}" !== "";
+    if(isEdit) {
+        defaultLat = parseFloat("{{ phong.location.y }}");
+        defaultLng = parseFloat("{{ phong.location.x }}");
+        zoomLevel = 16;
+    }
+    
+    var map = L.map('map').setView([defaultLat, defaultLng], zoomLevel);
+    L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', { 
+        attribution: '© Google Maps',
+        maxZoom: 20
+    }).addTo(map);
+    
+    var marker = null;
+    if(isEdit) { marker = L.marker([defaultLat, defaultLng]).addTo(map); }
+    
+    const diaChiInput = document.querySelector('textarea[name="dia_chi"]');
+
+    map.on('click', function(e) {
+        var lat = e.latlng.lat; 
+        var lng = e.latlng.lng;
+        
+        if (marker) { map.removeLayer(marker); }
+        marker = L.marker([lat, lng]).addTo(map);
+        
+        document.getElementById('input_lat').value = lat;
+        document.getElementById('input_lng').value = lng;
+
+        let url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+        
+        diaChiInput.value = "Đang tìm địa chỉ..."; 
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if(data && data.display_name) {
+                    let diaChi = data.display_name.replace(", Vietnam", "").replace(", Việt Nam", "");
+                    diaChiInput.value = diaChi;
+                } else {
+                    diaChiInput.value = "Không tìm thấy địa chỉ tự động, vui lòng nhập tay.";
+                }
+            })
+            .catch(error => {
+                console.error('Lỗi lấy địa chỉ API:', error);
+                diaChiInput.value = ""; 
+            });
+    });
+
+    function hienThiThumbnailDetail() {
+        var previewZone = document.getElementById('vung_chua_preview_detail');
+        var previewArea = document.getElementById('image_preview_detail');
+        var files = document.getElementById('hinh_anh_phu').files;
+        previewArea.innerHTML = ''; 
+        if(files.length > 0) {
+            previewZone.style.display = 'block';
+            [].forEach.call(files, function(file) {
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.className = 'preview-image-managed new-upload-preview'; 
+                    img.title = 'Ảnh mới sắp tải lên';
+                    previewArea.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewZone.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

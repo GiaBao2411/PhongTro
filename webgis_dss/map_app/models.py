@@ -47,3 +47,10 @@ class DonDatPhong(models.Model):
 
     def __str__(self):
         return f"{self.nguoi_thue.username} đặt {self.phong.ten}"
+    
+class HinhAnhPhongTro(models.Model):
+    phong = models.ForeignKey(PhongTro, on_delete=models.CASCADE, related_name='danh_sach_anh')
+    hinh_anh = models.ImageField(upload_to='phongtro_gallery/')
+    
+    def __str__(self):
+        return f"Ảnh phụ của phòng: {self.phong.ten}"

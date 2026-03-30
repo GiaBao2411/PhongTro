@@ -30,6 +30,20 @@ urlpatterns = [
     path('chinh-sach-bao-mat/', views.privacy, name='privacy'),
     path('giai-quyet-khieu-nai/', views.complaint, name='complaint'),
     path('cau-hoi-thuong-gap/', views.faq, name='faq'),
+    path('he-thong/', views.admin_dashboard, name='admin_dashboard'),
+    path('he-thong/nguoi-dung/', views.custom_admin_users, name='custom_admin_users'),
+    path('he-thong/nguoi-dung/', views.custom_admin_users, name='custom_admin_users'),
+    path('he-thong/nguoi-dung/khoa/<int:pk>/', views.custom_admin_khoa_user, name='custom_admin_khoa_user'),
+    path('he-thong/nguoi-dung/xoa/<int:pk>/', views.custom_admin_xoa_user, name='custom_admin_xoa_user'),
+    path('he-thong/nguoi-dung/sua/<int:pk>/', views.custom_admin_edit_user, name='custom_admin_edit_user'),
+    path('he-thong/phong-tro/', views.custom_admin_phongtro, name='custom_admin_phongtro'),
+    path('he-thong/phong-tro/xoa/<int:pk>/', views.custom_admin_xoa_phongtro, name='custom_admin_xoa_phongtro'),
+    path('he-thong/phong-tro/them/', views.custom_admin_them_phongtro, name='custom_admin_them_phongtro'),
+    path('he-thong/phong-tro/sua/<int:pk>/', views.custom_admin_sua_phongtro, name='custom_admin_sua_phongtro'),
+    path('he-thong/tin-tuc/', views.custom_admin_tintuc, name='custom_admin_tintuc'),
+    path('he-thong/tin-tuc/them/', views.custom_admin_them_tintuc, name='custom_admin_them_tintuc'),
+    path('he-thong/tin-tuc/sua/<int:pk>/', views.custom_admin_sua_tintuc, name='custom_admin_sua_tintuc'),
+    path('he-thong/tin-tuc/xoa/<int:pk>/', views.custom_admin_xoa_tintuc, name='custom_admin_xoa_tintuc'),
 ]
 
 if settings.DEBUG:

@@ -148,3 +148,4 @@ STATICFILES_DIRS = [
 
 LOGIN_REDIRECT_URL = 'login_success' 
 LOGOUT_REDIRECT_URL = 'home'         
+LOGIN_URL = 'login'

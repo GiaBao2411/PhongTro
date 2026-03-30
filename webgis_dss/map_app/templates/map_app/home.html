@@ -39,12 +39,18 @@
             
             <div class="search-box-glass text-dark text-start">
                 <h5 class="fw-bold mb-3"><i class="bi bi-search"></i> Bạn muốn tìm trọ ở đâu?</h5>
+                
                 <div class="row g-2">
-                    <div class="col-md-9">
+                    <div class="col-md-9 position-relative">
                         <input type="text" id="homeSearchInput" 
                                class="form-control form-control-lg bg-light border-0" 
+                               autocomplete="off"
                                placeholder="Nhập địa điểm (Vd: Quận 10, ĐH Bách Khoa)..."
                                onkeypress="handleEnter(event)">
+                        
+                        <ul id="suggestionBox" class="list-group position-absolute w-100 shadow rounded-3 mt-1" 
+                            style="display: none; z-index: 1050; max-height: 250px; overflow-y: auto; left: 0;">
+                        </ul>
                     </div>
                     <div class="col-md-3">
                         <button onclick="goToMap()" class="btn btn-danger btn-lg w-100 fw-bold shadow">
@@ -52,6 +58,9 @@
                         </button>
                     </div>
                 </div>
+                
+                <input type="hidden" id="searchLat">
+                <input type="hidden" id="searchLng">
                 <div class="mt-3 small text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> Gợi ý: Quận 1, Bách Khoa, Hàng Xanh...</div>
             </div>
         </div>
@@ -181,14 +190,89 @@
     </div>
 
     <script>
+        // ---- THÊM MỚI: XỬ LÝ AUTOCOMPLETE API ----
+        document.addEventListener("DOMContentLoaded", function() {
+            const searchInput = document.getElementById('homeSearchInput');
+            const suggestionBox = document.getElementById('suggestionBox');
+            const latInput = document.getElementById('searchLat');
+            const lngInput = document.getElementById('searchLng');
+            let timeoutId;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(timeoutId);
+                const query = this.value;
+
+                if (query.length < 2) {
+                    suggestionBox.style.display = 'none';
+                    return;
+                }
+
+                // Chờ 0.5s sau khi gõ xong mới gọi API
+                timeoutId = setTimeout(() => {
+                    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&countrycodes=vn`;
+
+                    fetch(url)
+                        .then(res => res.json())
+                        .then(data => {
+                            suggestionBox.innerHTML = ''; 
+                            
+                            if (data.length > 0) {
+                                data.forEach(item => {
+                                    const li = document.createElement('li');
+                                    li.className = 'list-group-item list-group-item-action text-start py-2';
+                                    li.style.cursor = 'pointer';
+                                    
+                                    let diaChiGoiY = item.display_name.replace(', Việt Nam', '').replace(', Vietnam', '');
+                                    li.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-2"></i> ${diaChiGoiY}`;
+
+                                    li.onclick = function() {
+                                        searchInput.value = diaChiGoiY; 
+                                        latInput.value = item.lat; 
+                                        lngInput.value = item.lon; 
+                                        suggestionBox.style.display = 'none'; 
+                                    };
+                                    
+                                    suggestionBox.appendChild(li);
+                                });
+                                suggestionBox.style.display = 'block'; 
+                            } else {
+                                suggestionBox.style.display = 'none';
+                            }
+                        })
+                        .catch(err => console.error('Lỗi API:', err));
+                }, 500); 
+            });
+
+            // Ẩn bảng gợi ý khi click chuột ra ngoài
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionBox.contains(e.target)) {
+                    suggestionBox.style.display = 'none';
+                }
+            });
+        });
+
+        // ĐÃ SỬA: Hàm đẩy dữ liệu sang trang map
         function goToMap() {
             var keyword = document.getElementById('homeSearchInput').value;
-            if (keyword.trim() === "") { alert("Vui lòng nhập địa điểm cần tìm!"); return; }
-            window.location.href = "{% url 'map_view' %}?q=" + encodeURIComponent(keyword);
+            var lat = document.getElementById('searchLat').value;
+            var lng = document.getElementById('searchLng').value;
+
+            if (keyword.trim() === "") { 
+                alert("Vui lòng nhập địa điểm cần tìm!"); 
+                return; 
+            }
+            
+            // Nếu có chọn từ gợi ý, đẩy cả lat lng sang. Nếu tự gõ thì chỉ đẩy query
+            let url = "{% url 'map_view' %}?q=" + encodeURIComponent(keyword);
+            if (lat && lng) {
+                url += `&lat=${lat}&lng=${lng}`;
+            }
+            window.location.href = url;
         }
 
         function handleEnter(e) { if (e.key === 'Enter') goToMap(); }
 
+        // Code lưu yêu thích giữ nguyên
         function toggleFavorite(btn) {
             const roomId = btn.getAttribute('data-id');
             const isUserLoggedIn = "{{ request.user.is_authenticated }}";

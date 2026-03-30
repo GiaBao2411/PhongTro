@@ -4,6 +4,9 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required 
 from django.contrib import messages
+from django.contrib.auth.models import User
+from django.contrib.gis.geos import Point
+from .models import PhongTro, TinTuc, User, HinhAnhPhongTro
 import requests
 import json
 from .forms import DangKyForm, UserUpdateForm
@@ -144,7 +147,7 @@ def register(request):
     return render(request, 'map_app/register.html', {'form': form})
 
 def login_success(request):
-    return redirect('/admin/') if request.user.is_superuser else redirect('home')
+    return redirect('admin_dashboard') if request.user.is_superuser else redirect('home')
 
 @login_required
 def saved_rooms(request):
@@ -215,3 +218,202 @@ def thanh_toan(request, don_id):
 def booking_history(request):
     history = DonDatPhong.objects.filter(nguoi_thue=request.user).order_by('-ngay_tao')
     return render(request, 'map_app/booking_history.html', {'history': history})
+
+@login_required
+def admin_dashboard(request):
+    if not request.user.is_superuser: 
+        return redirect('home')
+    return render(request, 'map_app/admin_custom/admin_base.html') 
+
+@login_required
+def custom_admin_users(request):
+    if not request.user.is_superuser: 
+        return redirect('home')
+    danh_sach_user = User.objects.all().order_by('-date_joined')
+    return render(request, 'map_app/admin_custom/user_list.html', {'danh_sach_user': danh_sach_user})
+
+@login_required
+def custom_admin_khoa_user(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    
+    user_obj = get_object_or_404(User, pk=pk)
+    if user_obj == request.user:
+        messages.error(request, "Lỗi: Bạn không thể tự khóa tài khoản của chính mình!")
+    else:
+        user_obj.is_active = not user_obj.is_active 
+        user_obj.save()
+        hanh_dong = "MỞ KHÓA" if user_obj.is_active else "KHÓA"
+        messages.success(request, f"Đã {hanh_dong} tài khoản của {user_obj.username} thành công!")
+        
+    return redirect('custom_admin_users')
+
+@login_required
+def custom_admin_xoa_user(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    
+    user_obj = get_object_or_404(User, pk=pk)
+    if user_obj == request.user:
+        messages.error(request, "Lỗi: Bạn không thể tự xóa tài khoản của chính mình!")
+    else:
+        user_obj.delete()
+        messages.success(request, f"Đã xóa vĩnh viễn người dùng {user_obj.username}!")
+        
+    return redirect('custom_admin_users')
+
+
+@login_required
+def custom_admin_edit_user(request, pk):
+    if not request.user.is_superuser: 
+        return redirect('home')
+
+    user_obj = get_object_or_404(User, pk=pk)
+    
+
+    if request.method == "POST":
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        email = request.POST.get('email')
+        new_password = request.POST.get('new_password')
+        
+        user_obj.first_name = first_name
+        user_obj.last_name = last_name
+        user_obj.email = email
+        
+        if new_password and new_password.strip() != "":
+            user_obj.set_password(new_password) 
+            
+        user_obj.save() 
+        messages.success(request, f"Đã cập nhật tài khoản {user_obj.username} thành công!")
+        return redirect('custom_admin_users')
+        
+
+    return render(request, 'map_app/admin_custom/user_edit.html', {'user_obj': user_obj})
+
+
+@login_required
+def custom_admin_phongtro(request):
+    if not request.user.is_superuser: 
+        return redirect('home')
+    
+    danh_sach_phong = PhongTro.objects.all().order_by('-created_at')
+    
+    return render(request, 'map_app/admin_custom/phongtro_list.html', {'danh_sach_phong': danh_sach_phong})
+
+@login_required
+def custom_admin_xoa_phongtro(request, pk):
+    if not request.user.is_superuser: 
+        return redirect('home')
+    
+    phong = get_object_or_404(PhongTro, pk=pk)
+    ten_phong = phong.ten
+    phong.delete() 
+    
+    messages.success(request, f"Đã xóa phòng trọ: {ten_phong} thành công!")
+    return redirect('custom_admin_phongtro')
+
+@login_required
+def custom_admin_them_phongtro(request):
+    if not request.user.is_superuser: return redirect('home')
+    
+    if request.method == 'POST':
+        ten = request.POST.get('ten')
+        gia_thue = request.POST.get('gia_thue')
+        dia_chi = request.POST.get('dia_chi')
+        hinh_anh = request.FILES.get('hinh_anh') 
+        lat = request.POST.get('lat')
+        lng = request.POST.get('lng')
+        
+        location = Point(float(lng), float(lat), srid=4326) if lat and lng else None
+        
+        phong_moi = PhongTro.objects.create(
+                    ten=ten, gia_thue=gia_thue, dia_chi=dia_chi,
+                    hinh_anh=hinh_anh, location=location
+                )
+                
+        danh_sach_anh_phu = request.FILES.getlist('hinh_anh_phu') 
+        for file_anh in danh_sach_anh_phu:HinhAnhPhongTro.objects.create(phong=phong_moi, hinh_anh=file_anh)
+        messages.success(request, "Thêm phòng trọ mới thành công!")
+        return redirect('custom_admin_phongtro')
+        
+    return render(request, 'map_app/admin_custom/phongtro_form.html', {'action': 'Thêm Mới'})
+
+
+@login_required
+def custom_admin_sua_phongtro(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    phong = get_object_or_404(PhongTro, pk=pk)
+    
+    if request.method == 'POST':
+        phong.ten = request.POST.get('ten')
+        phong.gia_thue = request.POST.get('gia_thue')
+        phong.dia_chi = request.POST.get('dia_chi')
+        lat = request.POST.get('lat')
+        lng = request.POST.get('lng')
+        
+        if lat and lng:
+            phong.location = Point(float(lng), float(lat), srid=4326)
+            
+
+        if 'hinh_anh' in request.FILES:
+            phong.hinh_anh = request.FILES['hinh_anh']
+        phong.save()
+            
+        # ĐOẠN MỚI THÊM: Xử lý lưu THÊM nhiều ảnh phụ
+        danh_sach_anh_phu = request.FILES.getlist('hinh_anh_phu')
+        for file_anh in danh_sach_anh_phu:
+            HinhAnhPhongTro.objects.create(phong=phong, hinh_anh=file_anh)
+        messages.success(request, f"Đã cập nhật phòng {phong.ten}!")
+        return redirect('custom_admin_phongtro')
+        
+    return render(request, 'map_app/admin_custom/phongtro_form.html', {'action': 'Chỉnh Sửa', 'phong': phong})
+
+
+@login_required
+def custom_admin_tintuc(request):
+    if not request.user.is_superuser: return redirect('home')
+    danh_sach_tin = TinTuc.objects.all().order_by('-ngay_dang')
+    return render(request, 'map_app/admin_custom/tintuc_list.html', {'danh_sach_tin': danh_sach_tin})
+
+
+@login_required
+def custom_admin_them_tintuc(request):
+    if not request.user.is_superuser: return redirect('home')
+    if request.method == 'POST':
+        tieu_de = request.POST.get('tieu_de')
+        noi_dung = request.POST.get('noi_dung')
+        hinh_anh = request.FILES.get('hinh_anh')
+        
+        TinTuc.objects.create(tieu_de=tieu_de, noi_dung=noi_dung, hinh_anh=hinh_anh)
+        messages.success(request, "Thêm bài viết mới thành công!")
+        return redirect('custom_admin_tintuc')
+        
+    return render(request, 'map_app/admin_custom/tintuc_form.html', {'action': 'Thêm Mới'})
+
+
+@login_required
+def custom_admin_sua_tintuc(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    tin_tuc = get_object_or_404(TinTuc, pk=pk)
+    
+    if request.method == 'POST':
+        tin_tuc.tieu_de = request.POST.get('tieu_de')
+        tin_tuc.noi_dung = request.POST.get('noi_dung')
+        
+
+        if 'hinh_anh' in request.FILES:
+            tin_tuc.hinh_anh = request.FILES['hinh_anh']
+            
+        tin_tuc.save()
+        messages.success(request, f"Đã cập nhật bài viết: {tin_tuc.tieu_de}!")
+        return redirect('custom_admin_tintuc')
+        
+    return render(request, 'map_app/admin_custom/tintuc_form.html', {'action': 'Chỉnh Sửa', 'tin_tuc': tin_tuc})
+
+
+@login_required
+def custom_admin_xoa_tintuc(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    tin_tuc = get_object_or_404(TinTuc, pk=pk)
+    tin_tuc.delete()
+    messages.success(request, "Đã xóa bài viết thành công!")
+    return redirect('custom_admin_tintuc')
