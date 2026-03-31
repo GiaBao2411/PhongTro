@@ -17,8 +17,8 @@
         background: #f0f8ff;
     }
     .preview-image-managed {
-        width: 90px;
-        height: 90px;
+        width: 100px;
+        height: 100px;
         object-fit: cover;
         border-radius: 10px;
         border: 2px solid #fff;
@@ -31,6 +31,11 @@
     /* Viền xanh cho ảnh mới sắp tải lên */
     .new-upload-preview {
         border-color: #198754 !important; 
+    }
+    /* Style đặc biệt cho khung ảnh đại diện */
+    #khu-vuc-anh-dai-dien {
+        display: inline-block;
+        margin-top: 15px;
     }
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -81,14 +86,21 @@
                     <hr class="my-4">
 
                     <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-image"></i> Ảnh đại diện </h6>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Tấm ảnh này sẽ hiển thị ở các danh sách thu nhỏ ngoài trang chủ.</label>
+                    
+                    <div class="gallery-upload-box mb-3 text-center">
+                        <i class="bi bi-card-image text-muted mb-2" style="font-size: 2.5rem;"></i>
                         <input type="file" name="hinh_anh" class="form-control" accept="image/*" {% if not phong %}required{% endif %}>
-                        
+                        <small class="text-muted d-block mt-2">Ảnh này sẽ hiển thị đầu tiên trên trang chủ.</small>
+
                         {% if phong and phong.hinh_anh %}
-                            <div class="mt-3 p-2 border rounded-3 bg-light d-inline-block">
-                                <span class="small fst-italic text-muted d-block mb-1">Ảnh đại diện hiện tại:</span>
-                                <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed" title="Ảnh đại diện">
+                            <div class="position-relative mt-3 p-2 border rounded-3 bg-white shadow-sm mx-auto" id="khu-vuc-anh-dai-dien" style="width: max-content;">
+                                <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow">Ảnh hiện tại</span>
+                                <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed mt-2" title="Ảnh đại diện" style="width: 150px; height: 120px;">
+                                <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
+                                        style="top: -5px; right: -5px; width: 28px; height: 28px; z-index: 10;"
+                                        onclick="xoaAnhDaiDien('{{ phong.id }}')" title="Xóa ảnh đại diện này">
+                                    <i class="bi bi-trash fw-bold"></i>
+                                </button>
                             </div>
                         {% endif %}
                     </div>
@@ -126,9 +138,16 @@
                     {% if phong.danh_sach_anh.all %}
                     <div class="mt-4">
                         <span class="small fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Ảnh chi tiết đang có sẵn:</span>
-                        <div class="d-flex flex-wrap gap-3 mt-2">
+                        <div class="d-flex flex-wrap gap-3 mt-3">
                             {% for anh in phong.danh_sach_anh.all %}
-                                <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh chi tiết cũ">
+                                <div class="position-relative d-inline-block" id="anh-phu-{{ anh.id }}">
+                                    <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh chi tiết cũ">
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
+                                            style="top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;"
+                                            onclick="xoaAnhPhu('{{ anh.id }}')" title="Xóa ảnh này">
+                                        <i class="bi bi-x fw-bold"></i>
+                                    </button>
+                                </div>
                             {% endfor %}
                         </div>
                     </div>
@@ -143,6 +162,7 @@
         </div>
     </div>
 </form>
+
 <script>
     var defaultLat = 10.7769; 
     var defaultLng = 106.7009;
@@ -215,6 +235,54 @@
             });
         } else {
             previewZone.style.display = 'none';
+        }
+    }
+    
+    function xoaAnhDaiDien(phongId) {
+        if (confirm('Bạn có chắc chắn muốn xóa ảnh ĐẠI DIỆN của phòng trọ này?')) {
+            fetch(`/admin-custom/phongtro/${phongId}/xoa-anh-daidien/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let khuVucAnh = document.getElementById('khu-vuc-anh-dai-dien');
+                    khuVucAnh.style.transition = "0.3s";
+                    khuVucAnh.style.transform = "scale(0)";
+                    setTimeout(() => khuVucAnh.remove(), 300);
+                } else {
+                    alert('Lỗi: Không thể xóa ảnh lúc này.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+    
+    function xoaAnhPhu(anhId) {
+        if (confirm('Bạn có chắc chắn muốn xóa bức ảnh này khỏi phòng trọ?')) {
+            fetch(`/admin-custom/phongtro/xoa-anh/${anhId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let imgElement = document.getElementById(`anh-phu-${anhId}`);
+                    imgElement.style.transition = "0.3s";
+                    imgElement.style.transform = "scale(0)";
+                    setTimeout(() => imgElement.remove(), 300);
+                } else {
+                    alert('Lỗi: Không thể xóa ảnh lúc này.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
     }
 </script>

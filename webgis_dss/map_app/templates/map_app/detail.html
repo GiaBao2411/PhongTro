@@ -8,7 +8,7 @@
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-decoration-none">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'map_view' %}" class="text-decoration-none">Bản đồ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'room_list' %}" class="text-decoration-none">Danh sách phòng</a></li>
             <li class="breadcrumb-item active" aria-current="page">Chi tiết phòng</li>
         </ol>
     </nav>
@@ -166,7 +166,6 @@
 </div>
 
 <style>
-    /* CSS CSS cho khung ảnh nhỏ */
     .thumb-indicator {
         width: 90px;
         height: 65px;
@@ -178,33 +177,29 @@
         border: 2px solid transparent;
         flex-shrink: 0;
     }
-    /* Khi ảnh được chọn hoặc di chuột vào sẽ sáng lên và có viền */
     .thumb-indicator.active, .thumb-indicator:hover {
         opacity: 1;
         border-color: #0d6efd;
     }
-    /* Thanh cuộn đẹp */
     .custom-scrollbar::-webkit-scrollbar { height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
 </style>
 
 <script>
-    // Đồng bộ ảnh nhỏ khi bấm mũi tên ở ảnh lớn
     var myCarousel = document.getElementById('roomCarousel')
     if(myCarousel) {
         myCarousel.addEventListener('slide.bs.carousel', function (e) {
-            var index = e.to; // Lấy vị trí ảnh sắp chuyển tới
+            var index = e.to; 
             document.querySelectorAll('.thumb-indicator').forEach(function(img, i) {
                 if(i === index) {
-                    img.classList.add('active'); // Làm sáng ảnh tương ứng
+                    img.classList.add('active'); 
                 } else {
-                    img.classList.remove('active'); // Làm mờ các ảnh khác
+                    img.classList.remove('active'); 
                 }
             });
         });
     }
 
-    // Hàm xử lý Yêu thích
     function toggleDetailFavorite(btn) {
         const roomId = btn.getAttribute('data-id');
         const isUserLoggedIn = "{{ request.user.is_authenticated }}";

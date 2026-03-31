@@ -404,6 +404,36 @@ def custom_admin_sua_phongtro(request, pk):
         
     return render(request, 'map_app/admin_custom/phongtro_form.html', {'action': 'Chỉnh Sửa', 'phong': phong})
 
+@login_required
+def custom_admin_xoa_anh_daidien(request, pk):
+    if not request.user.is_superuser: 
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            phong = get_object_or_404(PhongTro, pk=pk)
+            if phong.hinh_anh:
+                phong.hinh_anh.delete(save=False) 
+                phong.hinh_anh = None 
+                phong.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def custom_admin_xoa_anh_phongtro(request, anh_id):
+    if not request.user.is_superuser: 
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            anh = get_object_or_404(HinhAnhPhongTro, pk=anh_id)
+            anh.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
 def custom_admin_tintuc(request):
@@ -462,6 +492,37 @@ def custom_admin_xoa_tintuc(request, pk):
     tin_tuc.delete()
     messages.success(request, "Đã xóa bài viết thành công!")
     return redirect('custom_admin_tintuc')
+
+@login_required
+def custom_admin_xoa_anh_daidien_tintuc(request, pk):
+    if not request.user.is_superuser: 
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            tin_tuc = get_object_or_404(TinTuc, pk=pk)
+            if tin_tuc.hinh_anh:
+                tin_tuc.hinh_anh.delete(save=False)
+                tin_tuc.hinh_anh = None
+                tin_tuc.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def custom_admin_xoa_anh_phu_tintuc(request, anh_id):
+    if not request.user.is_superuser: 
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            anh = get_object_or_404(HinhAnhTinTuc, pk=anh_id)
+            anh.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
 def custom_admin_dondatphong(request):

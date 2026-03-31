@@ -163,8 +163,6 @@
         document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
     });
 
-    // Đã xóa hàm capNhatToaDoTuTay()
-
     function timKiem() {
         if (!userMarker) { alert("Vui lòng chọn 1 điểm trên bản đồ hoặc dùng định vị!"); return; }
         var mode = document.querySelector('input[name="searchMode"]:checked').value;
