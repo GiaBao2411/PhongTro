@@ -3,12 +3,36 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+    /* CSS tuỳ chỉnh cho giao diện */
     #main-content { flex-grow: 1; display: flex; flex-direction: column; height: calc(100vh - 76px); }
     .map-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-    #sidebar { width: 350px; background: white; display: flex; flex-direction: column; border-right: 1px solid #ddd; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+    
+    /* Thiết kế thanh Sidebar giống ảnh */
+    #sidebar { 
+        width: 380px; 
+        background: white; 
+        display: flex; 
+        flex-direction: column; 
+        border-right: 1px solid #ddd; 
+        z-index: 1000; 
+        overflow-y: auto; 
+        box-shadow: 3px 0 15px rgba(0,0,0,0.05); 
+    }
+    /* Làm đẹp thanh cuộn */
+    #sidebar::-webkit-scrollbar { width: 6px; }
+    #sidebar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+    
     #map { flex-grow: 1; height: 100%; width: 100%; }
-    .room-card { cursor: pointer; border-bottom: 1px solid #eee; padding: 10px; transition: 0.2s; background: #fff; position: relative; }
-    .room-card:hover { background-color: #f0f8ff; border-color: #0d6efd; }
+    
+    /* Hiệu ứng danh sách gợi ý */
+    #suggestionsList .list-group-item { cursor: pointer; font-size: 0.85rem; padding: 10px 15px; border-left: 3px solid transparent; transition: all 0.2s; }
+    #suggestionsList .list-group-item:hover { background-color: #f0f8ff; color: #0d6efd; font-weight: 500; border-left-color: #0d6efd; }
+    
+    /* Hiệu ứng thẻ phòng trọ */
+    .room-card { cursor: pointer; border-bottom: 1px solid #eee; padding: 12px; transition: 0.2s; background: #fff; position: relative; border-radius: 8px; margin-bottom: 8px; }
+    .room-card:hover { background-color: #f8fbff; border-color: #0d6efd; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    
+    /* Hiệu ứng Icon vị trí */
     .user-pin-marker { background: transparent; border: none; }
     .pulse-animation {
         animation: pulse 2s infinite;
@@ -25,62 +49,86 @@
 
 {% block content %}
 <div class="map-container">
-    <div id="sidebar" class="p-3">
-        <h5 class="text-primary fw-bold mb-3"><i class="bi bi-search"></i> Bộ Lọc Tìm Kiếm</h5>
+    
+    <div id="sidebar">
+        <div class="bg-primary text-white p-3 text-center fw-bold shadow-sm" style="font-size: 1.1rem; letter-spacing: 0.5px;">
+            <i class="bi bi-map-fill me-2"></i>BẢN ĐỒ TÌM KIẾM
+        </div>
         
-        <div class="mb-3">
-            <label class="fw-bold small">1. Vị trí của bạn (Click trên bản đồ):</label>
-            <div class="input-group">
-                <input type="text" class="form-control bg-light" id="coords" placeholder="Tọa độ sẽ hiển thị ở đây..." style="font-size: 0.9rem;" readonly>
-                <button class="btn btn-outline-secondary bg-white" onclick="locateUser()" title="Vị trí hiện tại"><i class="bi bi-crosshair"></i></button>
-            </div>
-            <small class="text-muted fst-italic" style="font-size: 0.75rem;">Hãy click vào bản đồ hoặc dùng nút lấy vị trí</small>
-        </div>
-
-        <div class="mb-3">
-            <label class="fw-bold small mb-2">2. Tiêu chí tìm kiếm:</label>
-            <div class="d-flex gap-3 bg-light p-2 rounded border">
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="searchMode" id="modeTime" value="time" checked onchange="toggleMode()">
-                    <label class="form-check-label small fw-bold" for="modeTime"><i class="bi bi-clock"></i> Thời gian</label>
+        <div class="p-3">
+            <div class="mb-4 position-relative">
+                <label class="fw-bold mb-2 text-dark" style="font-size: 0.95rem;">1. Vị trí của bạn (Click hoặc Nhập):</label>
+                
+                <div class="input-group mb-2 shadow-sm">
+                    <span class="input-group-text bg-white text-secondary border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="addressInput" class="form-control border-start-0 ps-0" placeholder="Nhập tên đường, địa điểm..." autocomplete="off" style="font-size: 0.9rem;">
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="searchMode" id="modeDistance" value="distance" onchange="toggleMode()">
-                    <label class="form-check-label small fw-bold" for="modeDistance"><i class="bi bi-rulers"></i> Khoảng cách</label>
+                <ul id="suggestionsList" class="list-group position-absolute w-100 shadow-lg border-0" style="display: none; z-index: 1050; max-height: 200px; overflow-y: auto; top: 75px; border-radius: 8px;"></ul>
+
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light text-danger border-end-0" title="Tọa độ"><i class="bi bi-geo-alt-fill"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" id="coords" placeholder="Vĩ độ, Kinh độ" style="background:#f8f9fa; font-size: 0.9rem;" onchange="capNhatToaDoTuTay()">
+                    <button class="btn btn-primary" type="button" onclick="locateUser()" title="Lấy vị trí hiện tại">
+                        <i class="bi bi-crosshair"></i>
+                    </button>
+                </div>
+                <small class="text-muted fst-italic mt-2 d-block" style="font-size: 0.8rem;">(Có thể nhập tên đường hoặc dán trực tiếp tọa độ)</small>
+            </div>
+
+            <div class="mb-4">
+                <label class="fw-bold mb-2 text-dark" style="font-size: 0.95rem;">2. Tiêu chí tìm kiếm:</label>
+                <div class="d-flex gap-3 bg-light p-2 rounded border shadow-sm">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="searchMode" id="modeTime" value="time" checked onchange="toggleMode()">
+                        <label class="form-check-label small fw-bold text-primary" for="modeTime"><i class="bi bi-clock"></i> Thời gian</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="searchMode" id="modeDistance" value="distance" onchange="toggleMode()">
+                        <label class="form-check-label small fw-bold text-success" for="modeDistance"><i class="bi bi-rulers"></i> Khoảng cách</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4 p-3 bg-white border rounded shadow-sm">
+                <label class="fw-bold small mb-2 text-dark"><i class="bi bi-sliders text-primary me-1"></i> Tùy chọn nâng cao:</label>
+                <select class="form-select mb-3 shadow-sm" id="vehicleSelect" style="font-size: 0.9rem;">
+                    <option value="moto" selected>🛵 Xe máy (TB 35km/h)</option>
+                    <option value="car">🚗 Ô tô (TB 30km/h)</option>
+                    <option value="walk">🚶 Đi bộ (TB 5km/h)</option>
+                </select>
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="rushHourCheck">
+                    <label class="form-check-label small fw-bold text-danger" for="rushHourCheck"> Đang giờ cao điểm?</label>
+                    <div class="text-muted fst-italic" style="font-size: 0.75rem;">(Trừ hao thời gian kẹt xe)</div>
+                </div>
+            </div>
+
+            <div class="mb-4 p-3 border rounded shadow-sm bg-light">
+                <div id="inputTimeGroup">
+                    <label class="fw-bold small d-flex justify-content-between mb-2"><span>Thời gian tối đa:</span><span class="text-primary fw-bold" id="timeDisplay">15 phút</span></label>
+                    <input type="range" class="form-range" id="inputTime" min="5" max="60" step="5" value="15" oninput="document.getElementById('timeDisplay').innerText = this.value + ' phút'">
+                </div>
+                <div id="inputDistanceGroup" style="display: none;">
+                    <label class="fw-bold small d-flex justify-content-between mb-2"><span>Khoảng cách tối đa:</span><span class="text-success fw-bold" id="distDisplay">5 km</span></label>
+                    <input type="range" class="form-range" id="inputDist" min="1" max="30" step="1" value="5" oninput="document.getElementById('distDisplay').innerText = this.value + ' km'">
+                </div>
+            </div>
+
+            <button onclick="timKiem()" class="btn btn-primary w-100 fw-bold mb-3 shadow py-2 text-uppercase" style="letter-spacing: 0.5px;">
+                <i class="bi bi-search me-2"></i> TÌM KIẾM NGAY
+            </button>
+            <hr>
+            
+            <div id="results-area">
+                <div class="text-center mt-4 text-muted opacity-50">
+                    <i class="bi bi-geo-alt" style="font-size: 3rem;"></i>
+                    <p class="small mt-2">Kết quả sẽ hiện ở đây...</p>
                 </div>
             </div>
         </div>
-
-        <div class="mb-3 p-3 bg-white border rounded">
-            <label class="fw-bold small mb-2 text-primary"><i class="bi bi-sliders"></i> Tùy chọn nâng cao:</label>
-            <select class="form-select mb-2" id="vehicleSelect">
-                <option value="moto" selected>🛵 Xe máy (TB 35km/h)</option>
-                <option value="car">🚗 Ô tô (TB 30km/h)</option>
-                <option value="walk">🚶 Đi bộ (TB 5km/h)</option>
-            </select>
-            <div class="form-check form-switch mt-2">
-                <input class="form-check-input" type="checkbox" id="rushHourCheck">
-                <label class="form-check-label small text-danger fw-bold" for="rushHourCheck"><i class="bi bi-traffic-cone"></i> Đang giờ cao điểm?</label>
-                <div class="text-muted fst-italic" style="font-size: 0.75rem;">(Trừ hao thời gian kẹt xe)</div>
-            </div>
-        </div>
-
-        <div class="mb-3 p-3 border rounded shadow-sm">
-            <div id="inputTimeGroup">
-                <label class="fw-bold small d-flex justify-content-between"><span>Thời gian tối đa:</span><span class="text-primary fw-bold" id="timeDisplay">15 phút</span></label>
-                <input type="range" class="form-range mt-2" id="inputTime" min="5" max="60" step="5" value="15" oninput="document.getElementById('timeDisplay').innerText = this.value + ' phút'">
-            </div>
-            <div id="inputDistanceGroup" style="display: none;">
-                <label class="fw-bold small d-flex justify-content-between"><span>Khoảng cách di chuyển:</span><span class="text-danger fw-bold" id="distDisplay">5 km</span></label>
-                <input type="range" class="form-range mt-2" id="inputDist" min="1" max="30" step="1" value="5" oninput="document.getElementById('distDisplay').innerText = this.value + ' km'">
-            </div>
-        </div>
-
-        <button onclick="timKiem()" class="btn btn-primary w-100 fw-bold mb-3 shadow-sm py-2"><i class="bi bi-geo-alt-fill"></i> TÌM KIẾM NGAY</button>
-        <hr>
-        <div id="results-area"><div class="text-center mt-5 text-muted opacity-50"><i class="bi bi-geo-alt" style="font-size: 3rem;"></i><p class="small mt-2">Kết quả sẽ hiện ở đây...</p></div></div>
     </div>
     <div id="map"></div>
+    
 </div>
 {% endblock %}
 
@@ -162,9 +210,102 @@
         userMarker = L.marker(e.latlng, {icon: humanIcon}).addTo(map).bindPopup("<b>Vị trí hiện tại</b>").openPopup();
         document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
     });
+    // ==========================================
+    // TÍNH NĂNG GỢI Ý ĐỊA CHỈ TRỰC TIẾP TRÊN BẢN ĐỒ
+    // ==========================================
+    const addressInput = document.getElementById('addressInput');
+    const suggestionsList = document.getElementById('suggestionsList');
+    let suggestTimeout;
+
+    addressInput.addEventListener('input', function() {
+        clearTimeout(suggestTimeout);
+        const query = this.value;
+        
+        if (query.length < 2) {
+            suggestionsList.style.display = 'none';
+            return;
+        }
+
+        suggestTimeout = setTimeout(() => {
+            // Ưu tiên tìm kiếm tại TP.HCM để kết quả chuẩn xác hơn
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Ho Chi Minh City")}&countrycodes=vn&limit=5`)
+            .then(res => res.json())
+            .then(data => {
+                suggestionsList.innerHTML = '';
+                if (data.length > 0) {
+                    suggestionsList.style.display = 'block';
+                    data.forEach(item => {
+                        let li = document.createElement('li');
+                        li.className = 'list-group-item list-group-item-action text-truncate';
+                        let shortName = item.display_name.replace(', Việt Nam', '').replace(', Vietnam', '');
+                        li.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-2"></i> ${shortName}`;
+                        
+                        // Khi click vào 1 gợi ý
+                        li.onclick = () => {
+                            addressInput.value = shortName;
+                            // Tự động điền tọa độ vào ô bên dưới
+                            document.getElementById('coords').value = parseFloat(item.lat).toFixed(5) + ", " + parseFloat(item.lon).toFixed(5);
+                            suggestionsList.style.display = 'none';
+                            
+                            // Gọi hàm cập nhật bản đồ của bạn
+                            capNhatToaDoTuTay();
+                        };
+                        suggestionsList.appendChild(li);
+                    });
+                } else {
+                    suggestionsList.style.display = 'none';
+                }
+            });
+        }, 400); // Độ trễ 400ms để tránh gọi API liên tục
+    });
+
+    // Ẩn danh sách khi click ra chỗ khác
+    document.addEventListener('click', function(e) {
+        if (!addressInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+            suggestionsList.style.display = 'none';
+        }
+    });
+
+    // ==========================================
+    // HÀM MỚI: XỬ LÝ KHI NGƯỜI DÙNG NHẬP TAY TỌA ĐỘ
+    // ==========================================
+    function capNhatToaDoTuTay() {
+        var text = document.getElementById('coords').value;
+        if (!text.trim()) return;
+
+        try {
+            var parts = text.split(',');
+            var lat = parseFloat(parts[0].trim());
+            var lng = parseFloat(parts[1].trim());
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("⚠️ Định dạng lỗi! Vui lòng nhập: Vĩ độ, Kinh độ (VD: 10.7769, 106.7009)");
+                return;
+            }
+
+            // BẮT LỖI TỌA ĐỘ ẢO
+            if (lat < -90 || lat > 90) {
+                alert("❌ Vĩ độ không hợp lệ! Vui lòng nhập số từ -90 đến 90.");
+                return;
+            }
+            if (lng < -180 || lng > 180) {
+                alert("❌ Kinh độ không hợp lệ! Vui lòng nhập số từ -180 đến 180.");
+                return;
+            }
+
+            // Dời marker và map
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker([lat, lng], {icon: humanIcon}).addTo(map).bindPopup("<b>Vị trí nhập tay</b>").openPopup();
+            map.setView([lat, lng], 14);
+            if(routeLayer) map.removeLayer(routeLayer);
+
+        } catch (e) {
+            alert("⚠️ Lỗi định dạng tọa độ!");
+        }
+    }
 
     function timKiem() {
-        if (!userMarker) { alert("Vui lòng chọn 1 điểm trên bản đồ hoặc dùng định vị!"); return; }
+        if (!userMarker) { alert("Vui lòng chọn 1 điểm trên bản đồ hoặc nhập tọa độ!"); return; }
         var mode = document.querySelector('input[name="searchMode"]:checked').value;
         var val = (mode === 'time') ? document.getElementById('inputTime').value : document.getElementById('inputDist').value;
         var vehicle = document.getElementById('vehicleSelect').value;
@@ -176,6 +317,9 @@
             url: '/api/tim-kiem/', type: 'GET',
             data: { 'lat': userMarker.getLatLng().lat, 'lng': userMarker.getLatLng().lng, 'mode': mode, 'value': val, 'vehicle': vehicle, 'rush_hour': rushHour },
             success: function(res) {
+                // ==========================================
+                // BẮT LỖI TỪ API TRẢ VỀ KHI NHẬP TỌA ĐỘ GIỮA BIỂN
+                // ==========================================
                 if (res.error) {
                     alert("❌ Lỗi API: Tọa độ này nằm ngoài vùng hỗ trợ đường đi (VD: giữa biển, rừng sâu). Không thể vẽ bản đồ thời gian di chuyển.");
                     document.getElementById('results-area').innerHTML = "<p class='text-center p-3 text-danger'>Thất bại! Hãy chọn vị trí khác trên đất liền.</p>";

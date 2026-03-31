@@ -120,13 +120,15 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
+
 if os.name == 'nt':
-    VENV_BASE = r"C:\Users\ASUS\anaconda3\envs\webgis_env"
+    VENV_BASE = r"C:\Users\PYNDYN\anaconda3\envs\webgis_env"
     
     os.environ['PATH'] = os.path.join(VENV_BASE, 'Library', 'bin') + ';' + os.environ['PATH']
     
-    GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll') 
-    
+    GDAL_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'gdal.dll')
+    GEOS_LIBRARY_PATH = os.path.join(VENV_BASE, 'Library', 'bin', 'geos_c.dll')
+
     os.environ['GDAL_DATA'] = os.path.join(VENV_BASE, 'Library', 'share', 'gdal')
     os.environ['PROJ_LIB'] = os.path.join(VENV_BASE, 'Library', 'share', 'proj')
 

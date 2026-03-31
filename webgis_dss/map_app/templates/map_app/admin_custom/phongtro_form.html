@@ -17,8 +17,8 @@
         background: #f0f8ff;
     }
     .preview-image-managed {
-        width: 100px;
-        height: 100px;
+        width: 90px;
+        height: 90px;
         object-fit: cover;
         border-radius: 10px;
         border: 2px solid #fff;
@@ -31,11 +31,6 @@
     /* Viền xanh cho ảnh mới sắp tải lên */
     .new-upload-preview {
         border-color: #198754 !important; 
-    }
-    /* Style đặc biệt cho khung ảnh đại diện */
-    #khu-vuc-anh-dai-dien {
-        display: inline-block;
-        margin-top: 15px;
     }
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -78,29 +73,27 @@
                         <label class="form-label fw-bold">Địa chỉ chi tiết</label>
                         <textarea name="dia_chi" class="form-control" rows="2" placeholder="Số nhà, đường, phường, quận..." required>{{ phong.dia_chi }}</textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-primary"><i class="bi bi-pencil-square"></i> Mô tả chi tiết phòng trọ</label>
-                        <textarea name="mo_ta" class="form-control" rows="5" placeholder="Nhập mô tả về tiện ích, giờ giấc, an ninh, nội thất... (VD: Phòng có máy lạnh, gác lửng, không chung chủ...)" style="border-left: 4px solid #0d6efd;">{{ phong.mo_ta }}</textarea>
-                        <small class="text-muted italic">Mô tả hay sẽ giúp người thuê tin tưởng và đặt phòng nhanh hơn.</small>
-                    </div>
+
                     <hr class="my-4">
 
                     <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-image"></i> Ảnh đại diện </h6>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Tấm ảnh này sẽ hiển thị ở các danh sách thu nhỏ ngoài trang chủ.</label>
+                        <input type="file" name="hinh_anh" id="hinh_anh_dai_dien" class="form-control" accept="image/*" onchange="previewAnhDaiDien()" {% if not phong %}required{% endif %}>      
                     
-                    <div class="gallery-upload-box mb-3 text-center">
-                        <i class="bi bi-card-image text-muted mb-2" style="font-size: 2.5rem;"></i>
-                        <input type="file" name="hinh_anh" class="form-control" accept="image/*" {% if not phong %}required{% endif %}>
-                        <small class="text-muted d-block mt-2">Ảnh này sẽ hiển thị đầu tiên trên trang chủ.</small>
-
+                        <div id="preview_dai_dien" class="mt-3" style="display: none;">
+                            <span class="small fw-bold text-success">
+                                <i class="bi bi-check-circle-fill"></i> Ảnh đại diện mới:
+                            </span>
+                            <div class="d-flex mt-2">
+                                <img id="img_preview_dd" class="preview-image-managed new-upload-preview" title="Ảnh đại diện">
+                            </div>
+                        </div>
+                                          
                         {% if phong and phong.hinh_anh %}
-                            <div class="position-relative mt-3 p-2 border rounded-3 bg-white shadow-sm mx-auto" id="khu-vuc-anh-dai-dien" style="width: max-content;">
-                                <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow">Ảnh hiện tại</span>
-                                <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed mt-2" title="Ảnh đại diện" style="width: 150px; height: 120px;">
-                                <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
-                                        style="top: -5px; right: -5px; width: 28px; height: 28px; z-index: 10;"
-                                        onclick="xoaAnhDaiDien('{{ phong.id }}')" title="Xóa ảnh đại diện này">
-                                    <i class="bi bi-trash fw-bold"></i>
-                                </button>
+                            <div class="mt-3 p-2 border rounded-3 bg-light d-inline-block">
+                                <span class="small fst-italic text-muted d-block mb-1">Ảnh đại diện hiện tại:</span>
+                                <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed" title="Ảnh đại diện">
                             </div>
                         {% endif %}
                     </div>
@@ -117,6 +110,17 @@
                 <div class="card-body p-4">
                     <h6 class="fw-bold text-uppercase text-danger mb-3"><i class="bi bi-geo-alt-fill"></i> Tọa độ bản đồ (GIS)</h6>
                     <label class="form-label small text-muted mb-2">Nhấp chuột vào bản đồ để ghim vị trí chính xác của phòng trọ.</label>
+                    
+                    <div class="input-group mb-2">
+                        <input type="text" id="adminSearchMap" class="form-control form-control-sm" placeholder="🔍 Gõ địa chỉ để tìm nhanh trên bản đồ..." onkeydown="if(event.key === 'Enter') { event.preventDefault(); searchAdminMap(); }">
+                        <button class="btn btn-sm btn-secondary" type="button" onclick="searchAdminMap()">Tìm</button>
+                    </div>
+
+                    <div class="input-group mb-2 shadow-sm">
+                        <span class="input-group-text bg-light text-danger" title="Tọa độ"><i class="bi bi-pin-map-fill"></i></span>
+                        <input type="text" id="visible_coords" class="form-control font-monospace" placeholder="VD: 10.7769, 106.7009" style="background:#f8f9fa; font-size: 0.9rem;" onchange="capNhatTuToaDoNhaps()">
+                    </div>
+
                     <div id="map" style="height: 300px; border-radius: 12px; border: 2px solid #ddd;"></div>
                     
                     <input type="hidden" name="lat" id="input_lat" value="{{ phong.location.y|default:'' }}">
@@ -138,16 +142,9 @@
                     {% if phong.danh_sach_anh.all %}
                     <div class="mt-4">
                         <span class="small fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Ảnh chi tiết đang có sẵn:</span>
-                        <div class="d-flex flex-wrap gap-3 mt-3">
+                        <div class="d-flex flex-wrap gap-3 mt-2">
                             {% for anh in phong.danh_sach_anh.all %}
-                                <div class="position-relative d-inline-block" id="anh-phu-{{ anh.id }}">
-                                    <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh chi tiết cũ">
-                                    <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
-                                            style="top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;"
-                                            onclick="xoaAnhPhu('{{ anh.id }}')" title="Xóa ảnh này">
-                                        <i class="bi bi-x fw-bold"></i>
-                                    </button>
-                                </div>
+                                <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh chi tiết cũ">
                             {% endfor %}
                         </div>
                     </div>
@@ -164,27 +161,37 @@
 </form>
 
 <script>
+    // 1. CHUẨN BỊ TỌA ĐỘ
     var defaultLat = 10.7769; 
     var defaultLng = 106.7009;
     var zoomLevel = 13;
     var isEdit = "{{ phong.location.y|default:'' }}" !== "";
+    
+    // Nếu là trang Sửa phòng, lấy tọa độ cũ
     if(isEdit) {
         defaultLat = parseFloat("{{ phong.location.y }}");
         defaultLng = parseFloat("{{ phong.location.x }}");
         zoomLevel = 16;
     }
     
+    // 2. KHỞI TẠO BẢN ĐỒ
     var map = L.map('map').setView([defaultLat, defaultLng], zoomLevel);
     L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', { 
         attribution: '© Google Maps',
         maxZoom: 20
     }).addTo(map);
     
+    // 3. THÊM MARKER NẾU ĐANG Ở CHẾ ĐỘ SỬA
     var marker = null;
-    if(isEdit) { marker = L.marker([defaultLat, defaultLng]).addTo(map); }
+    if(isEdit) { 
+        marker = L.marker([defaultLat, defaultLng]).addTo(map); 
+        // Hiển thị tọa độ vào ô input
+        document.getElementById('visible_coords').value = defaultLat.toFixed(5) + ", " + defaultLng.toFixed(5);
+    }
     
     const diaChiInput = document.querySelector('textarea[name="dia_chi"]');
 
+    // 4. BẮT SỰ KIỆN CLICK BẢN ĐỒ
     map.on('click', function(e) {
         var lat = e.latlng.lat; 
         var lng = e.latlng.lng;
@@ -194,19 +201,20 @@
         
         document.getElementById('input_lat').value = lat;
         document.getElementById('input_lng').value = lng;
+        document.getElementById('visible_coords').value = lat.toFixed(5) + ", " + lng.toFixed(5);
 
         let url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
         
-        diaChiInput.value = "Đang tìm địa chỉ..."; 
+        diaChiInput.value = "⏳ Đang lấy địa chỉ từ ghim..."; 
 
         fetch(url)
             .then(response => response.json())
             .then(data => {
                 if(data && data.display_name) {
-                    let diaChi = data.display_name.replace(", Vietnam", "").replace(", Việt Nam", "");
-                    diaChiInput.value = diaChi;
+                    // Tự động điền địa chỉ vào ô Địa chỉ chi tiết
+                    diaChiInput.value = data.display_name.replace(", Vietnam", "").replace(", Việt Nam", "");
                 } else {
-                    diaChiInput.value = "Không tìm thấy địa chỉ tự động, vui lòng nhập tay.";
+                    diaChiInput.value = "";
                 }
             })
             .catch(error => {
@@ -214,6 +222,28 @@
                 diaChiInput.value = ""; 
             });
     });
+
+    // 5. CÁC HÀM XỬ LÝ ẢNH PREVIEW
+    function previewAnhDaiDien() {
+        var fileInput = document.getElementById('hinh_anh_dai_dien');
+        var previewBox = document.getElementById('preview_dai_dien');
+        var imgPreview = document.getElementById('img_preview_dd');
+
+        var file = fileInput.files[0];
+
+        if (file) {
+            var reader = new FileReader();
+
+            reader.onload = function(e) {
+                imgPreview.src = e.target.result;
+                previewBox.style.display = 'block';
+            }
+
+            reader.readAsDataURL(file);
+        } else {
+            previewBox.style.display = 'none';
+        }
+    }
 
     function hienThiThumbnailDetail() {
         var previewZone = document.getElementById('vung_chua_preview_detail');
@@ -237,52 +267,98 @@
             previewZone.style.display = 'none';
         }
     }
-    
-    function xoaAnhDaiDien(phongId) {
-        if (confirm('Bạn có chắc chắn muốn xóa ảnh ĐẠI DIỆN của phòng trọ này?')) {
-            fetch(`/admin-custom/phongtro/${phongId}/xoa-anh-daidien/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let khuVucAnh = document.getElementById('khu-vuc-anh-dai-dien');
-                    khuVucAnh.style.transition = "0.3s";
-                    khuVucAnh.style.transform = "scale(0)";
-                    setTimeout(() => khuVucAnh.remove(), 300);
-                } else {
-                    alert('Lỗi: Không thể xóa ảnh lúc này.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
+
+    // 6. KIỂM TRA ĐÃ CHỌN TỌA ĐỘ CHƯA KHI BẤM LƯU
+    document.querySelector('form').addEventListener('submit', function(e) {
+        var lat = document.getElementById('input_lat').value;
+        var lng = document.getElementById('input_lng').value;
+        
+        if (!lat || !lng) {
+            e.preventDefault(); 
+            alert("⚠️ Bạn chưa chọn vị trí trên bản đồ! Vui lòng nhấp chuột vào bản đồ để ghim vị trí phòng trọ trước khi lưu.");
+            document.getElementById('map').scrollIntoView({behavior: 'smooth', block: 'center'});
         }
+    });
+
+    // 7. TÌM KIẾM ĐỊA CHỈ TRÊN BẢN ĐỒ VÀ GHIM VỊ TRÍ
+    function searchAdminMap() {
+        var query = document.getElementById('adminSearchMap').value;
+        if(query.length < 3) return;
+        
+        var searchBtn = document.querySelector('button[onclick="searchAdminMap()"]');
+        var originalBtnText = searchBtn.innerHTML;
+        searchBtn.innerHTML = "⏳...";
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Ho Chi Minh City')}&countrycodes=vn&limit=1`)
+        .then(res => res.json())
+        .then(data => {
+            searchBtn.innerHTML = originalBtnText; 
+            
+            if(data.length > 0) {
+                var lat = parseFloat(data[0].lat);
+                var lon = parseFloat(data[0].lon);
+                
+                // 1. Bay đến vị trí
+                map.setView([lat, lon], 16); 
+
+                // 2. Xóa ghim cũ và cắm ghim mới
+                if (marker) map.removeLayer(marker);
+                marker = L.marker([lat, lon]).addTo(map);
+
+                // 3. Điền tọa độ
+                document.getElementById('input_lat').value = lat;
+                document.getElementById('input_lng').value = lon;
+                document.getElementById('visible_coords').value = lat.toFixed(5) + ", " + lon.toFixed(5);
+
+                // 4. LUÔN LUÔN ghi đè địa chỉ mới tìm được vào ô "Địa chỉ chi tiết"
+                if(diaChiInput) {
+                    diaChiInput.value = data[0].display_name.replace(", Vietnam", "").replace(", Việt Nam", "");
+                }
+
+            } else {
+                alert("❌ Không tìm thấy khu vực này! Vui lòng thử từ khóa khác.");
+            }
+        })
+        .catch(error => {
+            searchBtn.innerHTML = originalBtnText;
+            console.error("Lỗi tìm kiếm: ", error);
+        });
     }
-    
-    function xoaAnhPhu(anhId) {
-        if (confirm('Bạn có chắc chắn muốn xóa bức ảnh này khỏi phòng trọ?')) {
-            fetch(`/admin-custom/phongtro/xoa-anh/${anhId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let imgElement = document.getElementById(`anh-phu-${anhId}`);
-                    imgElement.style.transition = "0.3s";
-                    imgElement.style.transform = "scale(0)";
-                    setTimeout(() => imgElement.remove(), 300);
-                } else {
-                    alert('Lỗi: Không thể xóa ảnh lúc này.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
+
+    // 8. KHI DÁN TỌA ĐỘ VÀO Ô
+    function capNhatTuToaDoNhaps() {
+        var text = document.getElementById('visible_coords').value;
+        if (!text.trim()) return;
+
+        try {
+            var parts = text.split(',');
+            var lat = parseFloat(parts[0].trim());
+            var lng = parseFloat(parts[1].trim());
+
+            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                alert("⚠️ Tọa độ không hợp lệ! Vui lòng nhập: Vĩ độ, Kinh độ (VD: 10.7769, 106.7009)");
+                return;
+            }
+
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng]).addTo(map);
+            map.setView([lat, lng], 16);
+
+            document.getElementById('input_lat').value = lat;
+            document.getElementById('input_lng').value = lng;
+
+            diaChiInput.value = "Đang tìm địa chỉ từ tọa độ..."; 
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data && data.display_name) {
+                        diaChiInput.value = data.display_name.replace(", Vietnam", "").replace(", Việt Nam", "");
+                    } else {
+                        diaChiInput.value = "";
+                    }
+                });
+        } catch (e) {
+            console.error(e);
         }
     }
 </script>
