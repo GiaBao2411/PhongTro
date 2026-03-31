@@ -9,7 +9,7 @@ class PhongTro(models.Model):
     dia_chi = models.CharField(max_length=255)
     location = gis_models.PointField(srid=4326) 
     hinh_anh = models.ImageField(upload_to='phong_tro/', blank=True, null=True)
-    mo_ta = models.TextField(blank=True, null=True)
+    mo_ta = models.TextField(null=True, blank=True, verbose_name="Mô tả chi tiết")
     created_at = models.DateTimeField(auto_now_add=True)
     favorites = models.ManyToManyField(User, related_name='favorite_rooms', blank=True)
 
@@ -28,6 +28,13 @@ class TinTuc(models.Model):
 
     def __str__(self):
         return self.tieu_de
+
+class HinhAnhTinTuc(models.Model):
+    tin_tuc = models.ForeignKey(TinTuc, on_delete=models.CASCADE, related_name='danh_sach_anh_tin')
+    hinh_anh = models.ImageField(upload_to='tin_tuc_phu/')
+    
+    def __str__(self):
+        return f"Ảnh phụ của {self.tin_tuc.tieu_de}"
 
 class DonDatPhong(models.Model):
     TRANG_THAI_CHOICES = [
@@ -54,3 +61,28 @@ class HinhAnhPhongTro(models.Model):
     
     def __str__(self):
         return f"Ảnh phụ của phòng: {self.phong.ten}"
+
+class DanhGia(models.Model):
+    phong = models.ForeignKey(PhongTro, on_delete=models.CASCADE, related_name='danh_sach_danh_gia')
+    nguoi_danh_gia = models.ForeignKey(User, on_delete=models.CASCADE)
+    so_sao = models.IntegerField(default=5)
+    noi_dung = models.TextField()
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nguoi_danh_gia.username} đánh giá {self.phong.ten}"
+
+class KhieuNai(models.Model):
+    TRANG_THAI = [
+        ('moi', 'Mới tiếp nhận'), 
+        ('dang_xu_ly', 'Đang xử lý'), 
+        ('da_xong', 'Đã giải quyết')
+    ]
+    nguoi_gui = models.ForeignKey(User, on_delete=models.CASCADE)
+    tieu_de = models.CharField(max_length=200)
+    noi_dung = models.TextField()
+    trang_thai = models.CharField(max_length=20, choices=TRANG_THAI, default='moi')
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Khiếu nại: {self.tieu_de} - {self.nguoi_gui.username}"

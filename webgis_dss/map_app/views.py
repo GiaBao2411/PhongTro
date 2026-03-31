@@ -1,16 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
-from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required 
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.gis.geos import Point
-from .models import PhongTro, TinTuc, User, HinhAnhPhongTro
+from django.contrib.gis.geos import GEOSGeometry, Point
+from django.core.paginator import Paginator
+from django.db.models import Q
 import requests
 import json
+from .models import (
+    PhongTro, TinTuc, HinhAnhPhongTro, HinhAnhTinTuc, 
+    DonDatPhong, KhieuNai, DanhGia
+)
 from .forms import DangKyForm, UserUpdateForm
-from .models import PhongTro, TinTuc, DonDatPhong
 
 ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
 
@@ -39,8 +42,28 @@ def room_detail(request, pk):
     return render(request, 'map_app/detail.html', {'phong': phong, 'is_booked': is_booked})
 
 def room_list(request):
-    all_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=BUSY_STATUS).order_by('-created_at')
-    return render(request, 'map_app/room_list.html', {'rooms': all_rooms})
+    all_rooms = PhongTro.objects.exclude(dondatphong__trang_thai__in=['thanh_cong', 'da_dat_coc']).order_by('-id')
+    search_query = request.GET.get('search', '')
+    price_filter = request.GET.get('price', '')
+    if search_query:
+        all_rooms = all_rooms.filter(
+            Q(ten__icontains=search_query) | Q(dia_chi__icontains=search_query)
+        )
+    if price_filter:
+        if price_filter == 'under_2m':
+            all_rooms = all_rooms.filter(gia_thue__lt=2000000)
+        elif price_filter == '2m_5m':
+            all_rooms = all_rooms.filter(gia_thue__range=(2000000, 5000000))
+        elif price_filter == 'above_5m':
+            all_rooms = all_rooms.filter(gia_thue__gt=5000000)
+    paginator = Paginator(all_rooms, 6) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/room_list.html', {
+        'rooms': page_obj,
+        'search_query': search_query,
+        'price_filter': price_filter
+    })
 
 def guide(request):
     return render(request, 'map_app/pages/guide.html')
@@ -48,7 +71,19 @@ def guide(request):
 def privacy(request):
     return render(request, 'map_app/pages/privacy.html')
 
+@login_required
 def complaint(request):
+    if request.method == 'POST':
+        tieu_de = request.POST.get('tieu_de')
+        noi_dung = request.POST.get('noi_dung')
+        KhieuNai.objects.create(
+            nguoi_gui=request.user,
+            tieu_de=tieu_de,
+            noi_dung=noi_dung
+        )
+        messages.success(request, "Khiếu nại của bạn đã được gửi. Quản trị viên sẽ xử lý sớm nhất!")
+        return redirect('complaint')
+        
     return render(request, 'map_app/pages/complaint.html')
 
 def faq(request):
@@ -347,21 +382,23 @@ def custom_admin_sua_phongtro(request, pk):
         phong.ten = request.POST.get('ten')
         phong.gia_thue = request.POST.get('gia_thue')
         phong.dia_chi = request.POST.get('dia_chi')
+        
+        phong.mo_ta = request.POST.get('mo_ta') 
+
         lat = request.POST.get('lat')
         lng = request.POST.get('lng')
         
         if lat and lng:
             phong.location = Point(float(lng), float(lat), srid=4326)
             
-
         if 'hinh_anh' in request.FILES:
             phong.hinh_anh = request.FILES['hinh_anh']
-        phong.save()
             
-        # ĐOẠN MỚI THÊM: Xử lý lưu THÊM nhiều ảnh phụ
+        phong.save() 
         danh_sach_anh_phu = request.FILES.getlist('hinh_anh_phu')
         for file_anh in danh_sach_anh_phu:
             HinhAnhPhongTro.objects.create(phong=phong, hinh_anh=file_anh)
+            
         messages.success(request, f"Đã cập nhật phòng {phong.ten}!")
         return redirect('custom_admin_phongtro')
         
@@ -378,12 +415,17 @@ def custom_admin_tintuc(request):
 @login_required
 def custom_admin_them_tintuc(request):
     if not request.user.is_superuser: return redirect('home')
+    
     if request.method == 'POST':
         tieu_de = request.POST.get('tieu_de')
         noi_dung = request.POST.get('noi_dung')
         hinh_anh = request.FILES.get('hinh_anh')
-        
-        TinTuc.objects.create(tieu_de=tieu_de, noi_dung=noi_dung, hinh_anh=hinh_anh)
+        tin_tuc_moi = TinTuc.objects.create(tieu_de=tieu_de, noi_dung=noi_dung, hinh_anh=hinh_anh)
+    
+        danh_sach_anh_phu = request.FILES.getlist('hinh_anh_phu')
+        for file_anh in danh_sach_anh_phu:
+            HinhAnhTinTuc.objects.create(tin_tuc=tin_tuc_moi, hinh_anh=file_anh)
+
         messages.success(request, "Thêm bài viết mới thành công!")
         return redirect('custom_admin_tintuc')
         
@@ -399,11 +441,14 @@ def custom_admin_sua_tintuc(request, pk):
         tin_tuc.tieu_de = request.POST.get('tieu_de')
         tin_tuc.noi_dung = request.POST.get('noi_dung')
         
-
         if 'hinh_anh' in request.FILES:
             tin_tuc.hinh_anh = request.FILES['hinh_anh']
             
         tin_tuc.save()
+        danh_sach_anh_phu = request.FILES.getlist('hinh_anh_phu')
+        for file_anh in danh_sach_anh_phu:
+            HinhAnhTinTuc.objects.create(tin_tuc=tin_tuc, hinh_anh=file_anh)
+            
         messages.success(request, f"Đã cập nhật bài viết: {tin_tuc.tieu_de}!")
         return redirect('custom_admin_tintuc')
         
@@ -417,3 +462,77 @@ def custom_admin_xoa_tintuc(request, pk):
     tin_tuc.delete()
     messages.success(request, "Đã xóa bài viết thành công!")
     return redirect('custom_admin_tintuc')
+
+@login_required
+def custom_admin_dondatphong(request):
+    if not request.user.is_superuser: return redirect('home')
+    danh_sach_don = DonDatPhong.objects.all().order_by('-ngay_tao')
+    return render(request, 'map_app/admin_custom/dondatphong_list.html', {'danh_sach_don': danh_sach_don})
+
+@login_required
+def custom_admin_duyet_don(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    don = get_object_or_404(DonDatPhong, pk=pk)
+    
+    if request.method == 'POST':
+        trang_thai_moi = request.POST.get('trang_thai')
+        don.trang_thai = trang_thai_moi
+        don.save()
+        messages.success(request, f"Đã cập nhật trạng thái đơn của {don.nguoi_thue.username} thành công!")
+        
+    return redirect('custom_admin_dondatphong')
+
+@login_required
+def custom_admin_xoa_don(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    don = get_object_or_404(DonDatPhong, pk=pk)
+    don.delete()
+    messages.success(request, "Đã xóa đơn đặt phòng thành công!")
+    return redirect('custom_admin_dondatphong')
+
+@login_required
+def gui_danh_gia(request, room_id):
+    if request.method == 'POST':
+        phong = get_object_or_404(PhongTro, id=room_id)
+        DanhGia.objects.create(
+            phong=phong,
+            nguoi_danh_gia=request.user,
+            so_sao=request.POST.get('so_sao'),
+            noi_dung=request.POST.get('noi_dung')
+        )
+        messages.success(request, "Cảm ơn bạn đã gửi đánh giá!")
+    return redirect('room_detail', pk=room_id)
+
+@login_required
+def gui_khieu_nai(request):
+    if request.method == 'POST':
+        KhieuNai.objects.create(
+            nguoi_gui=request.user,
+            tieu_de=request.POST.get('tieu_de'),
+            noi_dung=request.POST.get('noi_dung')
+        )
+        messages.success(request, "Khiếu nại của bạn đã được gửi. Quản trị viên sẽ xử lý sớm nhất!")
+        return redirect('gui_khieu_nai') 
+    return render(request, 'map_app/complaint.html')
+
+
+@login_required
+def custom_admin_khieunai(request):
+    if not request.user.is_superuser: return redirect('home')
+    danh_sach = KhieuNai.objects.all().order_by('-ngay_tao')
+    return render(request, 'map_app/admin_custom/khieunai_list.html', {'danh_sach': danh_sach})
+
+@login_required
+def custom_admin_cap_nhat_khieunai(request, pk):
+    if not request.user.is_superuser: return redirect('home')
+    khieu_nai = get_object_or_404(KhieuNai, pk=pk)
+    if request.method == 'POST':
+        khieu_nai.trang_thai = request.POST.get('trang_thai')
+        khieu_nai.save()
+        messages.success(request, "Đã cập nhật trạng thái khiếu nại!")
+    return redirect('custom_admin_khieunai')
+
+@login_required
+def lich_su_khieu_nai(request):
+    danh_sach = KhieuNai.objects.filter(nguoi_gui=request.user).order_by('-ngay_tao')
+    return render(request, 'map_app/complaint_history.html', {'danh_sach': danh_sach})

@@ -66,10 +66,61 @@
                     {{ phong.mo_ta|default:"Chủ trọ chưa cập nhật mô tả cho phòng này." }}
                 </p>
             </div>
-        </div>
+
+            <div class="mt-5">
+                <h4 class="fw-bold border-bottom pb-2 mb-4">Đánh giá từ người thuê</h4>
+                
+                {% for dg in phong.danh_sach_danh_gia.all %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-primary"><i class="bi bi-person-circle me-1"></i> {{ dg.nguoi_danh_gia.username }}</strong>
+                        <span class="text-warning">
+                            {% for i in "12345"|make_list %}
+                                <i class="bi {% if forloop.counter <= dg.so_sao %}bi-star-fill{% else %}bi-star{% endif %}"></i>
+                            {% endfor %}
+                        </span>
+                    </div>
+                    <p class="mb-1 mt-2 text-dark">{{ dg.noi_dung }}</p>
+                    <small class="text-muted"><i class="bi bi-clock"></i> {{ dg.ngay_tao|date:"d/m/Y - H:i" }}</small>
+                </div>
+                {% empty %}
+                    <p class="text-muted fst-italic">Chưa có đánh giá nào. Hãy là người đầu tiên trải nghiệm và chia sẻ!</p>
+                {% endfor %}
+
+                {% if request.user.is_authenticated %}
+                <div class="card bg-light border-0 mt-4 p-4 rounded-4 shadow-sm">
+                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-pencil-square me-2"></i>Viết đánh giá của bạn</h6>
+                    <form action="{% url 'gui_danh_gia' phong.id %}" method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Chất lượng phòng (Số sao):</label>
+                            <select name="so_sao" class="form-select shadow-none border-0" style="width: 200px;">
+                                <option value="5">⭐⭐⭐⭐⭐ Tuyệt vời</option>
+                                <option value="4">⭐⭐⭐⭐ Tốt</option>
+                                <option value="3">⭐⭐⭐ Bình thường</option>
+                                <option value="2">⭐⭐ Tệ</option>
+                                <option value="1">⭐ Rất tệ</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <textarea name="noi_dung" class="form-control shadow-none border-0" rows="3" placeholder="Chia sẻ trải nghiệm của bạn về phòng trọ này để giúp những người thuê sau nhé..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm">Gửi đánh giá</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mt-3 rounded-4 border-0 shadow-sm d-flex align-items-center">
+                    <i class="bi bi-exclamation-circle-fill fs-4 me-3"></i>
+                    <div>
+                        Vui lòng <a href="{% url 'login' %}" class="fw-bold text-decoration-none text-danger">Đăng nhập</a> để gửi đánh giá về phòng trọ này.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            </div>
 
         <div class="col-lg-5">
-            <div class="card border-0 shadow rounded-4 p-4 sticky-top" style="top: 90px;">
+            <div class="card border-0 shadow rounded-4 p-4" style="z-index: 10;">
                 <h2 class="fw-bold mb-3">{{ phong.ten }}</h2>
                 
                 <div class="d-flex align-items-center mb-3 text-danger">
@@ -92,7 +143,7 @@
                     </button>
                     
                     <div class="d-flex gap-2">
-                        <a href="{% url 'map_view' %}" class="btn btn-outline-dark fw-bold flex-grow-1">
+                        <a href="{% url 'map_view' %}?q={{ phong.dia_chi|urlencode }}" class="btn btn-outline-dark fw-bold flex-grow-1">
                             <i class="bi bi-map-fill me-2"></i> Xem bản đồ
                         </a>
                         
@@ -153,7 +204,7 @@
         });
     }
 
-    // Hàm xử lý Yêu thích (Giữ nguyên)
+    // Hàm xử lý Yêu thích
     function toggleDetailFavorite(btn) {
         const roomId = btn.getAttribute('data-id');
         const isUserLoggedIn = "{{ request.user.is_authenticated }}";

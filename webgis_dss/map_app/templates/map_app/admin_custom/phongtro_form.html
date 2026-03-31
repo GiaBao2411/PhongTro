@@ -73,7 +73,11 @@
                         <label class="form-label fw-bold">Địa chỉ chi tiết</label>
                         <textarea name="dia_chi" class="form-control" rows="2" placeholder="Số nhà, đường, phường, quận..." required>{{ phong.dia_chi }}</textarea>
                     </div>
-
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-primary"><i class="bi bi-pencil-square"></i> Mô tả chi tiết phòng trọ</label>
+                        <textarea name="mo_ta" class="form-control" rows="5" placeholder="Nhập mô tả về tiện ích, giờ giấc, an ninh, nội thất... (VD: Phòng có máy lạnh, gác lửng, không chung chủ...)" style="border-left: 4px solid #0d6efd;">{{ phong.mo_ta }}</textarea>
+                        <small class="text-muted italic">Mô tả hay sẽ giúp người thuê tin tưởng và đặt phòng nhanh hơn.</small>
+                    </div>
                     <hr class="my-4">
 
                     <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-image"></i> Ảnh đại diện </h6>

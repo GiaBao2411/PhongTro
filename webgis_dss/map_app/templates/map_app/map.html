@@ -29,12 +29,12 @@
         <h5 class="text-primary fw-bold mb-3"><i class="bi bi-search"></i> Bộ Lọc Tìm Kiếm</h5>
         
         <div class="mb-3">
-            <label class="fw-bold small">1. Vị trí của bạn (Click hoặc Nhập):</label>
+            <label class="fw-bold small">1. Vị trí của bạn (Click trên bản đồ):</label>
             <div class="input-group">
-                <input type="text" class="form-control" id="coords" placeholder="VD: 10.7769, 106.7009" style="background:#fff; font-size: 0.9rem;" onchange="capNhatToaDoTuTay()">
-                <button class="btn btn-outline-secondary" onclick="locateUser()" title="Vị trí hiện tại"><i class="bi bi-crosshair"></i></button>
+                <input type="text" class="form-control bg-light" id="coords" placeholder="Tọa độ sẽ hiển thị ở đây..." style="font-size: 0.9rem;" readonly>
+                <button class="btn btn-outline-secondary bg-white" onclick="locateUser()" title="Vị trí hiện tại"><i class="bi bi-crosshair"></i></button>
             </div>
-            <small class="text-muted fst-italic" style="font-size: 0.75rem;">Có thể dán tọa độ Google Maps (Vĩ độ, Kinh độ)</small>
+            <small class="text-muted fst-italic" style="font-size: 0.75rem;">Hãy click vào bản đồ hoặc dùng nút lấy vị trí</small>
         </div>
 
         <div class="mb-3">
@@ -163,46 +163,10 @@
         document.getElementById('coords').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
     });
 
-    // ==========================================
-    // HÀM MỚI: XỬ LÝ KHI NGƯỜI DÙNG NHẬP TAY TỌA ĐỘ
-    // ==========================================
-    function capNhatToaDoTuTay() {
-        var text = document.getElementById('coords').value;
-        if (!text.trim()) return;
-
-        try {
-            var parts = text.split(',');
-            var lat = parseFloat(parts[0].trim());
-            var lng = parseFloat(parts[1].trim());
-
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("⚠️ Định dạng lỗi! Vui lòng nhập: Vĩ độ, Kinh độ (VD: 10.7769, 106.7009)");
-                return;
-            }
-
-            // BẮT LỖI TỌA ĐỘ ẢO
-            if (lat < -90 || lat > 90) {
-                alert("❌ Vĩ độ không hợp lệ! Vui lòng nhập số từ -90 đến 90.");
-                return;
-            }
-            if (lng < -180 || lng > 180) {
-                alert("❌ Kinh độ không hợp lệ! Vui lòng nhập số từ -180 đến 180.");
-                return;
-            }
-
-            // Dời marker và map
-            if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.marker([lat, lng], {icon: humanIcon}).addTo(map).bindPopup("<b>Vị trí nhập tay</b>").openPopup();
-            map.setView([lat, lng], 14);
-            if(routeLayer) map.removeLayer(routeLayer);
-
-        } catch (e) {
-            alert("⚠️ Lỗi định dạng tọa độ!");
-        }
-    }
+    // Đã xóa hàm capNhatToaDoTuTay()
 
     function timKiem() {
-        if (!userMarker) { alert("Vui lòng chọn 1 điểm trên bản đồ hoặc nhập tọa độ!"); return; }
+        if (!userMarker) { alert("Vui lòng chọn 1 điểm trên bản đồ hoặc dùng định vị!"); return; }
         var mode = document.querySelector('input[name="searchMode"]:checked').value;
         var val = (mode === 'time') ? document.getElementById('inputTime').value : document.getElementById('inputDist').value;
         var vehicle = document.getElementById('vehicleSelect').value;
@@ -214,9 +178,6 @@
             url: '/api/tim-kiem/', type: 'GET',
             data: { 'lat': userMarker.getLatLng().lat, 'lng': userMarker.getLatLng().lng, 'mode': mode, 'value': val, 'vehicle': vehicle, 'rush_hour': rushHour },
             success: function(res) {
-                // ==========================================
-                // BẮT LỖI TỪ API TRẢ VỀ KHI NHẬP TỌA ĐỘ GIỮA BIỂN
-                // ==========================================
                 if (res.error) {
                     alert("❌ Lỗi API: Tọa độ này nằm ngoài vùng hỗ trợ đường đi (VD: giữa biển, rừng sâu). Không thể vẽ bản đồ thời gian di chuyển.");
                     document.getElementById('results-area').innerHTML = "<p class='text-center p-3 text-danger'>Thất bại! Hãy chọn vị trí khác trên đất liền.</p>";

@@ -2,6 +2,28 @@
 {% block title %}{{ action }} Tin Tức{% endblock %}
 
 {% block content %}
+<style>
+    .preview-image-managed {
+        width: 120px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid #fff;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        transition: 0.2s;
+    }
+    .preview-image-managed:hover { transform: scale(1.05); }
+    .new-upload-preview { border-color: #198754 !important; }
+    .gallery-upload-box {
+        border: 2px dashed #ddd;
+        border-radius: 12px;
+        padding: 20px;
+        background: #fafafa;
+        transition: 0.3s;
+    }
+    .gallery-upload-box:hover { border-color: #0d6efd; background: #f0f8ff; }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-fill"></i> {{ action }} Tin Tức</h4>
     <a href="{% url 'custom_admin_tintuc' %}" class="btn btn-outline-secondary fw-bold px-3">
@@ -9,33 +31,123 @@
     </a>
 </div>
 
-<div class="card shadow-sm border-0 rounded-4">
-    <div class="card-body p-4">
-        <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Tiêu đề bài viết</label>
-                <input type="text" name="tieu_de" class="form-control" value="{{ tin_tuc.tieu_de }}" required>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Ảnh bìa</label>
-                <input type="file" name="hinh_anh" class="form-control" accept="image/*" {% if not tin_tuc %}required{% endif %}>
-                {% if tin_tuc and tin_tuc.hinh_anh %}
-                    <div class="mt-2 text-muted small">Ảnh hiện tại: <a href="{{ tin_tuc.hinh_anh.url }}" target="_blank">Xem ảnh</a></div>
-                {% endif %}
-            </div>
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tiêu đề bài viết</label>
+                        <input type="text" name="tieu_de" class="form-control" value="{{ tin_tuc.tieu_de }}" placeholder="Nhập tiêu đề hấp dẫn..." required>
+                    </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-bold">Nội dung bài viết</label>
-                <textarea name="noi_dung" class="form-control" rows="10" required>{{ tin_tuc.noi_dung }}</textarea>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nội dung bài viết</label>
+                        <textarea name="noi_dung" class="form-control" rows="15" placeholder="Viết nội dung chi tiết ở đây..." required>{{ tin_tuc.noi_dung }}</textarea>
+                    </div>
             </div>
-            
-            <button type="submit" class="btn btn-success fw-bold px-4 py-2 mt-2">
-                <i class="bi bi-save me-1"></i> Lưu Bài Viết
-            </button>
-        </form>
+        </div>
     </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-image"></i> Ảnh bìa chính</h6>
+                <input type="file" name="hinh_anh" id="hinh_anh_input" class="form-control" accept="image/*" {% if not tin_tuc %}required{% endif %} onchange="previewSingleImage(event)">
+                
+                {% if tin_tuc and tin_tuc.hinh_anh %}
+                    <div class="mt-3 p-2 border rounded-3 bg-light d-inline-block" id="current_image_box" style="transition: 0.3s;">
+                        <span class="small fst-italic text-muted d-block mb-1">Ảnh bìa hiện tại:</span>
+                        <img src="{{ tin_tuc.hinh_anh.url }}" class="preview-image-managed" title="Ảnh bìa">
+                    </div>
+                {% endif %}
+
+                <div class="mt-3" id="preview_zone" style="display: none;">
+                    <span class="small fw-bold text-danger"><i class="bi bi-arrow-up-circle-fill"></i> Ảnh mới sắp tải lên:</span>
+                    <div class="mt-2"><img id="image_preview" src="" class="preview-image-managed new-upload-preview"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-uppercase text-success mb-3"><i class="bi bi-images"></i> Các ảnh khác</h6>
+                
+                <div class="gallery-upload-box mb-3 text-center">
+                    <i class="bi bi-cloud-arrow-up-fill text-muted" style="font-size: 2rem;"></i>
+                    <input type="file" name="hinh_anh_phu" id="hinh_anh_phu" class="form-control mt-2" accept="image/*" multiple onchange="hienThiThumbnailDetail()">
+                    <small class="text-muted d-block mt-2">Nhấn đè phím <b>Ctrl</b> để chọn nhiều ảnh.</small>
+                </div>
+
+                {% if tin_tuc.danh_sach_anh_tin.all %}
+                <div class="mt-3">
+                    <span class="small fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Ảnh minh họa hiện tại:</span>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% for anh in tin_tuc.danh_sach_anh_tin.all %}
+                            <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" style="width: 80px; height: 80px;" title="Ảnh cũ">
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="mt-3" id="vung_chua_preview_detail" style="display: none;">
+                    <span class="small fw-bold text-danger"><i class="bi bi-arrow-up-circle-fill"></i> Ảnh mới sắp thêm:</span>
+                    <div id="image_preview_detail" class="d-flex flex-wrap gap-2 mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-success fw-bold px-4 py-3 mt-3 w-100 shadow-sm">
+            <i class="bi bi-save me-1"></i> HOÀN TẤT VÀ LƯU BÀI VIẾT
+        </button>
+        </form> </div>
 </div>
+
+<script>
+    function previewSingleImage(event) {
+        var input = event.target;
+        var previewZone = document.getElementById('preview_zone');
+        var imagePreview = document.getElementById('image_preview');
+        var currentImageBox = document.getElementById('current_image_box');
+
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                previewZone.style.display = 'block';
+                if(currentImageBox) currentImageBox.style.opacity = '0.3';
+            }
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            previewZone.style.display = 'none';
+            if(currentImageBox) currentImageBox.style.opacity = '1';
+        }
+    }
+    function hienThiThumbnailDetail() {
+        var previewZone = document.getElementById('vung_chua_preview_detail');
+        var previewArea = document.getElementById('image_preview_detail');
+        var files = document.getElementById('hinh_anh_phu').files;
+        
+        previewArea.innerHTML = ''; 
+        if(files.length > 0) {
+            previewZone.style.display = 'block';
+            [].forEach.call(files, function(file) {
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.className = 'preview-image-managed new-upload-preview'; 
+                    img.style.width = '80px'; 
+                    img.style.height = '80px';
+                    previewArea.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewZone.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}

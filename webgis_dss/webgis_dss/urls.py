@@ -44,6 +44,14 @@ urlpatterns = [
     path('he-thong/tin-tuc/them/', views.custom_admin_them_tintuc, name='custom_admin_them_tintuc'),
     path('he-thong/tin-tuc/sua/<int:pk>/', views.custom_admin_sua_tintuc, name='custom_admin_sua_tintuc'),
     path('he-thong/tin-tuc/xoa/<int:pk>/', views.custom_admin_xoa_tintuc, name='custom_admin_xoa_tintuc'),
+    path('he-thong/don-dat-phong/', views.custom_admin_dondatphong, name='custom_admin_dondatphong'),
+    path('he-thong/don-dat-phong/duyet/<int:pk>/', views.custom_admin_duyet_don, name='custom_admin_duyet_don'),
+    path('he-thong/don-dat-phong/xoa/<int:pk>/', views.custom_admin_xoa_don, name='custom_admin_xoa_don'),
+    path('phong-tro/<int:room_id>/gui-danh-gia/', views.gui_danh_gia, name='gui_danh_gia'),
+    path('khieu-nai/', views.gui_khieu_nai, name='gui_khieu_nai'),
+    path('he-thong/khieu-nai/', views.custom_admin_khieunai, name='custom_admin_khieunai'),
+    path('he-thong/khieu-nai/cap-nhat/<int:pk>/', views.custom_admin_cap_nhat_khieunai, name='custom_admin_cap_nhat_khieunai'),
+    path('lich-su-khieu-nai/', views.lich_su_khieu_nai, name='lich_su_khieu_nai'),
 ]
 
 if settings.DEBUG:

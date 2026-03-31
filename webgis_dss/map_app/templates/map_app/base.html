@@ -116,10 +116,12 @@
                                 </div>
                                 <span>{{ user.username }}</span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end animate slideIn border-0 shadow-lg" style="min-width: 230px;">
+                            <ul class="dropdown-menu dropdown-menu-end animate slideIn border-0 shadow-lg" style="min-width: 230px; z-index: 1050;">
                                 <li><a class="dropdown-item py-2" href="{% url 'profile' %}"><i class="bi bi-person-circle me-2 text-primary"></i> Thông tin tài khoản</a></li>
                                 <li><a class="dropdown-item py-2" href="{% url 'saved_rooms' %}"><i class="bi bi-heart-fill me-2 text-danger"></i> Phòng yêu thích</a></li>
                                 <li><a class="dropdown-item py-2" href="{% url 'booking_history' %}"><i class="bi bi-clock-history me-2 text-warning"></i> Lịch sử đặt phòng</a></li>
+                                
+                                <li><a class="dropdown-item py-2" href="{% url 'lich_su_khieu_nai' %}"><i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i> Lịch sử khiếu nại</a></li>
                                 
                                 {% if user.is_superuser %}
                                     <li><hr class="dropdown-divider my-2"></li>

@@ -1,0 +1,54 @@
+{% extends 'map_app/admin_custom/admin_base.html' %}
+{% block title %}Quản Lý Khiếu Nại{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i> Quản Lý Khiếu Nại</h4>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Người Gửi</th>
+                        <th>Tiêu đề</th>
+                        <th style="width: 30%;">Nội dung</th>
+                        <th>Ngày Gửi</th>
+                        <th>Trạng Thái (Tự động lưu)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in danh_sach %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-primary">{{ item.nguoi_gui.username }}</td>
+                        <td class="fw-bold">{{ item.tieu_de }}</td>
+                        <td class="text-muted small">{{ item.noi_dung }}</td>
+                        <td>{{ item.ngay_tao|date:"d/m/Y" }}</td>
+                        <td>
+                            <form action="{% url 'custom_admin_cap_nhat_khieunai' item.id %}" method="POST">
+                                {% csrf_token %}
+                                <select name="trang_thai" class="form-select form-select-sm shadow-none fw-bold
+                                    {% if item.trang_thai == 'moi' %}bg-danger text-white
+                                    {% elif item.trang_thai == 'dang_xu_ly' %}bg-warning text-dark
+                                    {% else %}bg-success text-white{% endif %}" 
+                                    onchange="this.form.submit()">
+                                    <option value="moi" {% if item.trang_thai == 'moi' %}selected{% endif %}>🔴 Mới</option>
+                                    <option value="dang_xu_ly" {% if item.trang_thai == 'dang_xu_ly' %}selected{% endif %}>🟡 Đang xử lý</option>
+                                    <option value="da_xong" {% if item.trang_thai == 'da_xong' %}selected{% endif %}>🟢 Đã giải quyết</option>
+                                </select>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">Chưa có khiếu nại nào. Hệ thống đang bình yên!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
