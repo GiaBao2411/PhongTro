@@ -1,289 +1,834 @@
 {% extends 'map_app/admin_custom/admin_base.html' %}
-{% block title %}{{ action }} Phòng Trọ{% endblock %}
+{% load humanize %}
+{% block title %}{{ action }} Khu Trọ{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-    /* Style cho khu vực ảnh chi tiết */
     .gallery-upload-box {
-        border: 2px dashed #ddd;
-        border-radius: 12px;
-        padding: 20px;
-        background: #fafafa;
-        transition: 0.3s;
+        border: 2px dashed #ddd; border-radius: 12px;
+        padding: 20px; background: #fafafa; transition: 0.3s;
     }
-    .gallery-upload-box:hover {
-        border-color: #0d6efd;
-        background: #f0f8ff;
-    }
+    .gallery-upload-box:hover { border-color: #0d6efd; background: #f0f8ff; }
     .preview-image-managed {
-        width: 100px;
-        height: 100px;
-        object-fit: cover;
-        border-radius: 10px;
-        border: 2px solid #fff;
-        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-        transition: 0.2s;
+        width: 100px; height: 100px; object-fit: cover;
+        border-radius: 10px; border: 2px solid #fff;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: 0.2s;
     }
-    .preview-image-managed:hover {
-        transform: scale(1.05);
+    .preview-image-managed:hover { transform: scale(1.05); }
+    .new-upload-preview { border-color: #198754 !important; }
+    #khu-vuc-anh-dai-dien { display: inline-block; margin-top: 15px; }
+
+    /* Form dùng chung thêm/sửa */
+    #form-them-phong {
+        border-radius: 12px; padding: 16px; margin-top: 12px; display: none;
     }
-    /* Viền xanh cho ảnh mới sắp tải lên */
-    .new-upload-preview {
-        border-color: #198754 !important; 
+    #form-them-phong.mode-them {
+        background: #f0f8ff; border: 2px dashed #0d6efd;
     }
-    /* Style đặc biệt cho khung ảnh đại diện */
-    #khu-vuc-anh-dai-dien {
-        display: inline-block;
-        margin-top: 15px;
+    #form-them-phong.mode-sua {
+        background: #fff8e1; border: 2px dashed #fd7e14;
+    }
+
+    .phong-moi-row td { background: #f0fff4; font-size: 0.875rem; }
+    .phong-moi-row .badge-moi { font-size: 0.65rem; }
+
+    /* Highlight row đang được sửa */
+    tr.dang-sua td { background: #fff3cd !important; outline: 2px solid #fd7e14; }
+
+    .anh-upload-zone {
+        border: 2px dashed #adb5bd; border-radius: 10px;
+        padding: 10px 8px; text-align: center; cursor: pointer;
+        background: #fff; transition: 0.2s; min-height: 74px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+    }
+    .anh-upload-zone:hover { border-color: #0d6efd; background: #f0f8ff; }
+    #preview-anh-phong {
+        width: 56px; height: 52px; object-fit: cover;
+        border-radius: 8px; border: 2px solid #198754; display: none;
+    }
+    .icon-placeholder-cam { font-size: 1.6rem; color: #adb5bd; line-height: 1; }
+    .label-cam { font-size: 0.7rem; color: #6c757d; margin-top: 3px; }
+
+    .thumb-phong {
+        width: 52px; height: 44px; object-fit: cover;
+        border-radius: 8px; border: 2px solid #dee2e6;
+    }
+    .thumb-placeholder {
+        width: 52px; height: 44px; border-radius: 8px;
+        background: #e9ecef; display: flex;
+        align-items: center; justify-content: center;
+        color: #adb5bd; font-size: 1.2rem;
     }
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-house-door-fill"></i> {{ action }} Phòng Trọ</h4>
-        <small class="text-muted">Quản lý Phòng trọ > {{ action }}</small>
+        <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-building"></i> {{ action }} Khu Trọ</h4>
+        <small class="text-muted">Quản lý > Khu Trọ > {{ action }}</small>
     </div>
     <a href="{% url 'custom_admin_phongtro' %}" class="btn btn-outline-secondary fw-bold px-3 rounded-pill">
         <i class="bi bi-arrow-left"></i> Quay lại danh sách
     </a>
 </div>
 
-<form method="POST" enctype="multipart/form-data">
+<form method="POST" enctype="multipart/form-data" id="main-form">
     {% csrf_token %}
+    <div id="phong-inputs-container" style="display:none;"></div>
+    <input type="hidden" name="phong_count" id="phong_count" value="0">
+
     <div class="row">
+        <!-- ===== CỘT TRÁI ===== -->
         <div class="col-lg-5">
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-body p-4">
-                    <h6 class="fw-bold text-uppercase text-muted mb-3">Thông tin cơ bản</h6>
-                    
+                    <h6 class="fw-bold text-uppercase text-muted mb-3">Thông tin Khu Trọ</h6>
+
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Tên phòng trọ</label>
-                        <input type="text" name="ten" class="form-control" value="{{ phong.ten }}" placeholder="VD: Phòng trọ cao cấp Quận 1" required>
+                        <label class="form-label fw-bold">Tên Khu Trọ</label>
+                        <input type="text" name="ten" class="form-control"
+                               value="{{ phong.ten }}" placeholder="VD: Khu trọ sinh viên Bách Khoa" required>
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Giá thuê (VNĐ/tháng)</label>
-                            <input type="number" name="gia_thue" class="form-control" value="{{ phong.gia_thue|floatformat:0 }}" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Diện tích (m²)</label>
-                            <input type="number" name="dien_tich" class="form-control" value="{{ phong.dien_tich|floatformat:0 }}">
-                        </div>
-                    </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">Địa chỉ chi tiết</label>
-                        <textarea name="dia_chi" class="form-control" rows="2" placeholder="Số nhà, đường, phường, quận..." required>{{ phong.dia_chi }}</textarea>
+                        <div class="input-group shadow-sm">
+                            <textarea name="dia_chi" id="input_dia_chi" class="form-control" rows="2"
+                                      placeholder="Số nhà, đường, phường, quận..." required>{{ phong.dia_chi }}</textarea>
+                            <button class="btn btn-primary d-flex flex-column align-items-center justify-content-center px-3"
+                                    type="button" onclick="timDiaChiTrenBanDo()">
+                                <i class="bi bi-geo-alt-fill fs-5 mb-1"></i>
+                                <small class="fw-bold">Ghim Bản Đồ</small>
+                            </button>
+                        </div>
+                        <small class="text-muted fst-italic mt-1 d-block">
+                            <i class="bi bi-info-circle"></i> Bản đồ tự động ghim sau khi gõ xong.
+                        </small>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-primary"><i class="bi bi-pencil-square"></i> Mô tả chi tiết phòng trọ</label>
-                        <textarea name="mo_ta" class="form-control" rows="5" placeholder="Nhập mô tả về tiện ích, giờ giấc, an ninh, nội thất... (VD: Phòng có máy lạnh, gác lửng, không chung chủ...)" style="border-left: 4px solid #0d6efd;">{{ phong.mo_ta }}</textarea>
-                        <small class="text-muted italic">Mô tả hay sẽ giúp người thuê tin tưởng và đặt phòng nhanh hơn.</small>
-                    </div>
-                    <hr class="my-4">
 
-                    <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-image"></i> Ảnh đại diện </h6>
-                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="bi bi-pencil-square"></i> Mô tả chung khu trọ
+                        </label>
+                        <textarea name="mo_ta" class="form-control" rows="5"
+                                  placeholder="Nhập mô tả về an ninh, giờ giấc, bãi giữ xe chung..."
+                                  style="border-left: 4px solid #0d6efd;">{{ phong.mo_ta }}</textarea>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="fw-bold text-uppercase text-primary mb-3">
+                        <i class="bi bi-image"></i> Ảnh đại diện Khu Trọ
+                    </h6>
                     <div class="gallery-upload-box mb-3 text-center">
                         <i class="bi bi-card-image text-muted mb-2" style="font-size: 2.5rem;"></i>
-                        <input type="file" name="hinh_anh" class="form-control" accept="image/*" {% if not phong %}required{% endif %}>
-                        <small class="text-muted d-block mt-2">Ảnh này sẽ hiển thị đầu tiên trên trang chủ.</small>
-
+                        <input type="file" name="hinh_anh" class="form-control" accept="image/*"
+                               {% if not phong %}required{% endif %}>
+                        <small class="text-muted d-block mt-2">Ảnh này sẽ hiển thị ngoài trang chủ.</small>
                         {% if phong and phong.hinh_anh %}
-                            <div class="position-relative mt-3 p-2 border rounded-3 bg-white shadow-sm mx-auto" id="khu-vuc-anh-dai-dien" style="width: max-content;">
-                                <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow">Ảnh hiện tại</span>
-                                <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed mt-2" title="Ảnh đại diện" style="width: 150px; height: 120px;">
-                                <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
-                                        style="top: -5px; right: -5px; width: 28px; height: 28px; z-index: 10;"
-                                        onclick="xoaAnhDaiDien('{{ phong.id }}')" title="Xóa ảnh đại diện này">
-                                    <i class="bi bi-trash fw-bold"></i>
-                                </button>
-                            </div>
+                        <div class="position-relative mt-3 p-2 border rounded-3 bg-white shadow-sm mx-auto"
+                             id="khu-vuc-anh-dai-dien" style="width: max-content;">
+                            <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow">Ảnh hiện tại</span>
+                            <img src="{{ phong.hinh_anh.url }}" class="preview-image-managed mt-2" style="width:150px;height:120px;">
+                            <button type="button"
+                                    class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow"
+                                    style="top:-5px;right:-5px;width:28px;height:28px;z-index:10;"
+                                    onclick="xoaAnhDaiDien('{{ phong.id }}')">
+                                <i class="bi bi-trash fw-bold"></i>
+                            </button>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            
             <button type="submit" class="btn btn-success fw-bold px-4 py-3 mt-2 w-100 rounded-3 shadow">
-                <i class="bi bi-save me-1"></i> HOÀN TẤT VÀ LƯU PHÒNG TRỌ
+                <i class="bi bi-save me-1"></i> HOÀN TẤT VÀ LƯU KHU TRỌ
             </button>
         </div>
 
+        <!-- ===== CỘT PHẢI ===== -->
         <div class="col-lg-7">
+
+            <!-- BẢN ĐỒ -->
             <div class="card shadow-sm border-0 rounded-4 mb-4">
                 <div class="card-body p-4">
-                    <h6 class="fw-bold text-uppercase text-danger mb-3"><i class="bi bi-geo-alt-fill"></i> Tọa độ bản đồ (GIS)</h6>
-                    <label class="form-label small text-muted mb-2">Nhấp chuột vào bản đồ để ghim vị trí chính xác của phòng trọ.</label>
-                    <div id="map" style="height: 300px; border-radius: 12px; border: 2px solid #ddd;"></div>
-                    
+                    <h6 class="fw-bold text-uppercase text-danger mb-3">
+                        <i class="bi bi-geo-alt-fill"></i> Tọa độ bản đồ (GIS)
+                    </h6>
+                    <div id="map" style="height:300px;border-radius:12px;border:2px solid #ddd;"></div>
                     <input type="hidden" name="lat" id="input_lat" value="{{ phong.location.y|default:'' }}">
                     <input type="hidden" name="lng" id="input_lng" value="{{ phong.location.x|default:'' }}">
                 </div>
             </div>
 
+            <!-- DANH SÁCH PHÒNG CON -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-uppercase text-primary mb-0">
+                            <i class="bi bi-door-open-fill"></i> Danh sách phòng con
+                        </h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-danger fs-6" id="badge-so-phong">
+                                {{ phong.danh_sach_phong.count|default:"0" }} Phòng
+                            </span>
+                            <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill px-3"
+                                    onclick="moFormThem()">
+                                <i class="bi bi-plus-circle-fill me-1"></i> Thêm phòng
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ===== FORM DÙNG CHUNG: THÊM & SỬA INLINE ===== -->
+                    <div id="form-them-phong" class="mode-them">
+
+                        <p class="fw-bold mb-3 small" id="form-title-label">
+                            <i class="bi bi-pencil-fill me-1 text-primary" id="form-title-icon"></i>
+                            <span id="form-title-text">Nhập thông tin phòng mới</span>
+                        </p>
+
+                        <div class="row g-2 align-items-end">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold mb-1">Tên phòng <span class="text-danger">*</span></label>
+                                <input type="text" id="inp_ten_phong" class="form-control form-control-sm" placeholder="VD: P.101">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold mb-1">Giá thuê (đ/tháng) <span class="text-danger">*</span></label>
+                                <input type="number" id="inp_gia_thue" class="form-control form-control-sm" placeholder="VD: 2500000" min="0">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-bold mb-1">Diện tích (m²)</label>
+                                <input type="number" id="inp_dien_tich" class="form-control form-control-sm" placeholder="20" min="1" value="20">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-bold mb-1">Trạng thái</label>
+                                <select id="inp_trang_thai" class="form-select form-select-sm">
+                                    <option value="trong">🟢 Còn trống</option>
+                                    <option value="da_dat">🔴 Đã đặt</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-bold mb-1">Ảnh phòng</label>
+                                <div class="anh-upload-zone" onclick="document.getElementById('inp_hinh_anh_phong').click()">
+                                    <input type="file" id="inp_hinh_anh_phong" accept="image/*"
+                                           onchange="xemTruocAnhPhong(this)"
+                                           style="display:none;" onclick="event.stopPropagation()">
+                                    <img id="preview-anh-phong" src="#" alt="preview">
+                                    <div id="icon-anh-placeholder">
+                                        <div class="icon-placeholder-cam"><i class="bi bi-camera-fill"></i></div>
+                                        <div class="label-cam">Chọn ảnh</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="button" id="btn-xac-nhan-form"
+                                    class="btn btn-success btn-sm fw-bold px-4"
+                                    onclick="xuLyXacNhanForm()">
+                                <i class="bi bi-check-lg me-1"></i>
+                                <span id="btn-xac-nhan-text">Thêm vào danh sách</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="dongForm()">Hủy</button>
+                        </div>
+                    </div>
+
+                    <!-- Bảng phòng -->
+                    <div class="table-responsive mt-3">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:58px;">Ảnh</th>
+                                    <th>Tên phòng</th>
+                                    <th>Giá thuê</th>
+                                    <th>DT</th>
+                                    <th>Trạng thái</th>
+                                    <th class="text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bang-phong-body">
+                                {% if phong %}
+                                    {% for p in phong.danh_sach_phong.all %}
+                                    <tr id="phong-db-{{ p.id }}">
+                                        <td>
+                                            {% if p.hinh_anh %}
+                                                <img src="{{ p.hinh_anh.url }}" class="thumb-phong">
+                                            {% else %}
+                                                <div class="thumb-placeholder"><i class="bi bi-image"></i></div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="fw-bold">{{ p.ten_phong }}</td>
+                                        <td class="text-danger fw-bold text-nowrap">{{ p.gia_thue|floatformat:0|intcomma }} đ</td>
+                                        <td class="text-nowrap">{{ p.dien_tich }} m²</td>
+                                        <td>
+                                            {% if p.trang_thai == 'trong' %}
+                                                <span class="badge bg-success">🟢 Trống</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">🔴 Đã đặt</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center text-nowrap">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm rounded-circle me-1"
+                                                    style="width:30px;height:30px;padding:0;"
+                                                    data-id="{{ p.id }}"
+                                                    data-ten="{{ p.ten_phong }}"
+                                                    data-gia="{{ p.gia_thue|floatformat:0 }}"
+                                                    data-dt="{{ p.dien_tich }}"
+                                                    data-tt="{{ p.trang_thai }}"
+                                                    onclick="moFormSuaDB(this)"
+                                                    title="Chỉnh sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm rounded-circle"
+                                                    style="width:30px;height:30px;padding:0;"
+                                                    onclick="xoaPhongDB('{{ p.id }}')" title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr id="row-trong">
+                                        <td colspan="6" class="text-center text-muted py-3">
+                                            <i class="bi bi-inbox me-2"></i>Chưa có phòng nào. Hãy nhấn <b>Thêm phòng</b> ở trên.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr id="row-trong">
+                                    <td colspan="6" class="text-center text-muted py-3">
+                                        <i class="bi bi-inbox me-2"></i>Chưa có phòng nào. Hãy nhấn <b>Thêm phòng</b> ở trên.
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if not phong %}
+                    <div class="alert alert-warning border-0 rounded-3 mb-0 mt-3 small">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Các phòng thêm ở đây sẽ được <b>lưu cùng lúc</b> khi bạn bấm <b>Hoàn tất và Lưu Khu Trọ</b>.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ẢNH PHỤ -->
             <div class="card shadow-sm border-0 rounded-4">
                 <div class="card-body p-4">
-                    <h6 class="fw-bold text-uppercase text-success mb-3"><i class="bi bi-images"></i> Ảnh chi tiết </h6>
-                    <label class="form-label small text-muted mb-3">Tải lên các ảnh chi tiết bên trong: Nhà vệ sinh, 2 phòng ngủ, bếp, chỗ để xe...</label>
-
+                    <h6 class="fw-bold text-uppercase text-success mb-3">
+                        <i class="bi bi-images"></i> Ảnh tiện ích chung
+                    </h6>
                     <div class="gallery-upload-box mb-3 text-center">
-                        <i class="bi bi-cloud-arrow-up-fill text-muted" style="font-size: 3rem;"></i>
-                        <input type="file" name="hinh_anh_phu" id="hinh_anh_phu" class="form-control mt-3" accept="image/*" multiple onchange="hienThiThumbnailDetail()">
-                        <small class="text-muted d-block mt-2">Nhấn đè phím <b>Ctrl</b> khi chọn để tải lên nhiều ảnh.</small>
+                        <i class="bi bi-cloud-arrow-up-fill text-muted" style="font-size:3rem;"></i>
+                        <input type="file" name="hinh_anh_phu" id="hinh_anh_phu"
+                               class="form-control mt-3" accept="image/*" multiple
+                               onchange="hienThiThumbnailDetail()">
                     </div>
 
                     {% if phong.danh_sach_anh.all %}
                     <div class="mt-4">
-                        <span class="small fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Ảnh chi tiết đang có sẵn:</span>
+                        <span class="small fw-bold text-success">
+                            <i class="bi bi-check-circle-fill"></i> Ảnh đang có sẵn:
+                        </span>
                         <div class="d-flex flex-wrap gap-3 mt-3">
                             {% for anh in phong.danh_sach_anh.all %}
-                                <div class="position-relative d-inline-block" id="anh-phu-{{ anh.id }}">
-                                    <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh chi tiết cũ">
-                                    <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
-                                            style="top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;"
-                                            onclick="xoaAnhPhu('{{ anh.id }}')" title="Xóa ảnh này">
-                                        <i class="bi bi-x fw-bold"></i>
-                                    </button>
-                                </div>
+                            <div class="position-relative d-inline-block" id="anh-phu-{{ anh.id }}">
+                                <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed">
+                                <button type="button"
+                                        class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow"
+                                        style="top:-8px;right:-8px;width:24px;height:24px;z-index:10;"
+                                        onclick="xoaAnhPhu('{{ anh.id }}')">
+                                    <i class="bi bi-x fw-bold"></i>
+                                </button>
+                            </div>
                             {% endfor %}
                         </div>
                     </div>
                     {% endif %}
 
-                    <div class="mt-4" id="vung_chua_preview_detail" style="display: none;">
-                        <span class="small fw-bold text-danger"><i class="bi bi-arrow-up-circle-fill"></i> Ảnh mới sắp tải lên:</span>
+                    <div class="mt-4" id="vung_chua_preview_detail" style="display:none;">
+                        <span class="small fw-bold text-danger">
+                            <i class="bi bi-arrow-up-circle-fill"></i> Ảnh mới sắp tải lên:
+                        </span>
                         <div id="image_preview_detail" class="d-flex flex-wrap gap-3 mt-2"></div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+
+        </div><!-- /col-lg-7 -->
+    </div><!-- /row -->
 </form>
 
 <script>
-    var defaultLat = 10.7769; 
-    var defaultLng = 106.7009;
-    var zoomLevel = 13;
-    var isEdit = "{{ phong.location.y|default:'' }}" !== "";
-    if(isEdit) {
-        defaultLat = parseFloat("{{ phong.location.y }}");
-        defaultLng = parseFloat("{{ phong.location.x }}");
-        zoomLevel = 16;
-    }
-    
-    var map = L.map('map').setView([defaultLat, defaultLng], zoomLevel);
-    L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', { 
-        attribution: '© Google Maps',
-        maxZoom: 20
-    }).addTo(map);
-    
-    var marker = null;
-    if(isEdit) { marker = L.marker([defaultLat, defaultLng]).addTo(map); }
-    
-    const diaChiInput = document.querySelector('textarea[name="dia_chi"]');
+// ============================= BẢN ĐỒ =============================
+var defaultLat = 10.7769, defaultLng = 106.7009, zoomLevel = 13;
+var isEdit = "{{ phong.location.y|default:'' }}" !== "";
+if (isEdit) {
+    defaultLat = parseFloat("{{ phong.location.y }}");
+    defaultLng = parseFloat("{{ phong.location.x }}");
+    zoomLevel = 16;
+}
+var map = L.map('map').setView([defaultLat, defaultLng], zoomLevel);
+L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', {
+    attribution: '© Google Maps', maxZoom: 20
+}).addTo(map);
+var marker = null;
+if (isEdit) marker = L.marker([defaultLat, defaultLng]).addTo(map);
 
-    map.on('click', function(e) {
-        var lat = e.latlng.lat; 
-        var lng = e.latlng.lng;
-        
-        if (marker) { map.removeLayer(marker); }
-        marker = L.marker([lat, lng]).addTo(map);
-        
-        document.getElementById('input_lat').value = lat;
-        document.getElementById('input_lng').value = lng;
+const diaChiInput = document.getElementById('input_dia_chi');
+map.on('click', function(e) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+    document.getElementById('input_lat').value = e.latlng.lat;
+    document.getElementById('input_lng').value = e.latlng.lng;
+    diaChiInput.value = "Đang tìm địa chỉ...";
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
+        .then(r => r.json()).then(d => {
+            diaChiInput.value = d.display_name
+                ? d.display_name.replace(", Vietnam","").replace(", Việt Nam","")
+                : "Không tìm thấy địa chỉ.";
+        }).catch(() => { diaChiInput.value = ""; });
+});
 
-        let url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-        
-        diaChiInput.value = "Đang tìm địa chỉ..."; 
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if(data && data.display_name) {
-                    let diaChi = data.display_name.replace(", Vietnam", "").replace(", Việt Nam", "");
-                    diaChiInput.value = diaChi;
-                } else {
-                    diaChiInput.value = "Không tìm thấy địa chỉ tự động, vui lòng nhập tay.";
-                }
-            })
-            .catch(error => {
-                console.error('Lỗi lấy địa chỉ API:', error);
-                diaChiInput.value = ""; 
-            });
+function timDiaChiTrenBanDo() {
+    var val = diaChiInput.value;
+    if (!val.trim()) { alert("Vui lòng nhập địa chỉ!"); return; }
+    var btn = document.querySelector('button[onclick="timDiaChiTrenBanDo()"]');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm mb-1"></span><small class="fw-bold">Đang ghim</small>';
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+", Việt Nam")}&limit=1`)
+        .then(r => r.json()).then(d => {
+            if (d && d.length > 0) {
+                var lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
+                if (marker) map.removeLayer(marker);
+                marker = L.marker([lat, lng]).addTo(map);
+                map.flyTo([lat, lng], 16);
+                document.getElementById('input_lat').value = lat;
+                document.getElementById('input_lng').value = lng;
+            } else alert("Không tìm thấy tọa độ.");
+        }).finally(() => {
+            btn.innerHTML = '<i class="bi bi-geo-alt-fill fs-5 mb-1"></i><small class="fw-bold">Ghim Bản Đồ</small>';
+        });
+}
+let typingTimer;
+if (diaChiInput) {
+    diaChiInput.addEventListener('input', function() {
+        clearTimeout(typingTimer);
+        if (diaChiInput.value.trim().length > 5) typingTimer = setTimeout(timDiaChiTrenBanDo, 1500);
     });
+}
 
-    function hienThiThumbnailDetail() {
-        var previewZone = document.getElementById('vung_chua_preview_detail');
-        var previewArea = document.getElementById('image_preview_detail');
-        var files = document.getElementById('hinh_anh_phu').files;
-        previewArea.innerHTML = ''; 
-        if(files.length > 0) {
-            previewZone.style.display = 'block';
-            [].forEach.call(files, function(file) {
-                var reader = new FileReader();
-                reader.onload = function(event) {
-                    var img = document.createElement('img');
-                    img.src = event.target.result;
-                    img.className = 'preview-image-managed new-upload-preview'; 
-                    img.title = 'Ảnh mới sắp tải lên';
-                    previewArea.appendChild(img);
-                }
-                reader.readAsDataURL(file);
-            });
+// ============================= GALLERY ẢNH =============================
+function hienThiThumbnailDetail() {
+    var zone  = document.getElementById('vung_chua_preview_detail');
+    var area  = document.getElementById('image_preview_detail');
+    var files = document.getElementById('hinh_anh_phu').files;
+    area.innerHTML = '';
+    if (files.length > 0) {
+        zone.style.display = 'block';
+        [].forEach.call(files, function(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'preview-image-managed new-upload-preview';
+                area.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+    } else zone.style.display = 'none';
+}
+
+function xoaAnhDaiDien(id) {
+    if (!confirm('Xóa ảnh ĐẠI DIỆN này?')) return;
+    fetch(`/admin-custom/phongtro/${id}/xoa-anh-daidien/`, {
+        method: 'POST', headers: {'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        if (d.success) document.getElementById('khu-vuc-anh-dai-dien').remove();
+        else alert('Lỗi xóa ảnh.');
+    });
+}
+
+function xoaAnhPhu(id) {
+    if (!confirm('Xóa ảnh này?')) return;
+    fetch(`/admin-custom/phongtro/xoa-anh/${id}/`, {
+        method: 'POST', headers: {'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(d => {
+        if (d.success) document.getElementById(`anh-phu-${id}`).remove();
+        else alert('Lỗi xóa ảnh.');
+    });
+}
+
+function getCsrf() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// ============================= QUẢN LÝ PHÒNG =============================
+let phongCounter = 0;
+let soPhongMoi   = 0;
+let soPhongDB    = parseInt("{{ phong.danh_sach_phong.count|default:'0' }}");
+let phongMoiData = {};
+
+// mode: null | 'them' | 'sua-moi' | 'sua-db'
+let formMode     = null;
+let formEditIdx  = null;   // dùng khi mode='sua-moi'
+let formEditDbId = null;   // dùng khi mode='sua-db'
+let rowDangSua   = null;   // <tr> đang highlight
+
+function capNhatBadge() {
+    document.getElementById('badge-so-phong').textContent = (soPhongDB + soPhongMoi) + ' Phòng';
+    document.getElementById('phong_count').value = phongCounter;
+}
+
+// ---- Reset fields form ----
+function resetFormFields() {
+    document.getElementById('inp_ten_phong').value  = '';
+    document.getElementById('inp_gia_thue').value   = '';
+    document.getElementById('inp_dien_tich').value  = '20';
+    document.getElementById('inp_trang_thai').value = 'trong';
+    document.getElementById('inp_hinh_anh_phong').value = '';
+    const prev = document.getElementById('preview-anh-phong');
+    prev.src = '#'; prev.style.display = 'none';
+    document.getElementById('icon-anh-placeholder').style.display = 'block';
+}
+
+// ---- Điền dữ liệu vào form ----
+function dienVaoForm(ten, gia, dt, tt, anhSrc) {
+    document.getElementById('inp_ten_phong').value  = ten;
+    document.getElementById('inp_gia_thue').value   = gia;
+    document.getElementById('inp_dien_tich').value  = dt;
+    document.getElementById('inp_trang_thai').value = tt;
+    document.getElementById('inp_hinh_anh_phong').value = '';
+    const prev = document.getElementById('preview-anh-phong');
+    if (anhSrc) {
+        prev.src = anhSrc; prev.style.display = 'block';
+        document.getElementById('icon-anh-placeholder').style.display = 'none';
+    } else {
+        prev.src = '#'; prev.style.display = 'none';
+        document.getElementById('icon-anh-placeholder').style.display = 'block';
+    }
+}
+
+// ---- Đổi giao diện form theo mode ----
+function datGiaoDienForm(mode) {
+    const form  = document.getElementById('form-them-phong');
+    const btnXN = document.getElementById('btn-xac-nhan-form');
+    const txt   = document.getElementById('btn-xac-nhan-text');
+    const icon  = document.getElementById('form-title-icon');
+    const title = document.getElementById('form-title-text');
+
+    form.classList.remove('mode-them', 'mode-sua');
+    if (mode === 'them') {
+        form.classList.add('mode-them');
+        icon.className  = 'bi bi-pencil-fill me-1 text-primary';
+        title.textContent = 'Nhập thông tin phòng mới';
+        btnXN.className = 'btn btn-success btn-sm fw-bold px-4';
+        txt.textContent = 'Thêm vào danh sách';
+    } else {
+        form.classList.add('mode-sua');
+        icon.className  = 'bi bi-pencil-square me-1 text-warning';
+        title.textContent = 'Chỉnh sửa thông tin phòng';
+        btnXN.className = 'btn btn-warning btn-sm fw-bold px-4';
+        txt.textContent = 'Lưu thay đổi';
+    }
+}
+
+// ---- Bỏ highlight row ----
+function huyHighlightRow() {
+    if (rowDangSua) { rowDangSua.classList.remove('dang-sua'); rowDangSua = null; }
+}
+
+// ---- Đóng form ----
+function dongForm() {
+    document.getElementById('form-them-phong').style.display = 'none';
+    huyHighlightRow();
+    resetFormFields();
+    formMode = null; formEditIdx = null; formEditDbId = null;
+}
+
+// ---- Mở form THÊM ----
+function moFormThem() {
+    huyHighlightRow();
+    formMode = 'them'; formEditIdx = null; formEditDbId = null;
+    resetFormFields();
+    datGiaoDienForm('them');
+    const form = document.getElementById('form-them-phong');
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('inp_ten_phong').focus();
+}
+
+// ---- Mở form SỬA phòng MỚI ----
+function moFormSuaMoi(idx) {
+    huyHighlightRow();
+    formMode = 'sua-moi'; formEditIdx = idx; formEditDbId = null;
+    const d = phongMoiData[idx];
+    dienVaoForm(d.ten, d.gia, d.dt, d.tt, d.anhSrc);
+    datGiaoDienForm('sua');
+    rowDangSua = document.getElementById(`phong-moi-${idx}`);
+    if (rowDangSua) rowDangSua.classList.add('dang-sua');
+    const form = document.getElementById('form-them-phong');
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('inp_ten_phong').focus();
+}
+
+// ---- Mở form SỬA phòng DB ----
+function moFormSuaDB(btn) {
+    huyHighlightRow();
+    formMode = 'sua-db'; formEditIdx = null; formEditDbId = btn.dataset.id;
+    dienVaoForm(btn.dataset.ten, btn.dataset.gia, btn.dataset.dt, btn.dataset.tt, null);
+    datGiaoDienForm('sua');
+    rowDangSua = document.getElementById(`phong-db-${btn.dataset.id}`);
+    if (rowDangSua) rowDangSua.classList.add('dang-sua');
+    const form = document.getElementById('form-them-phong');
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('inp_ten_phong').focus();
+}
+
+// ---- Dispatcher nút xác nhận ----
+function xuLyXacNhanForm() {
+    if (formMode === 'them')    luuThemPhong();
+    if (formMode === 'sua-moi') luuSuaPhongMoi();
+    if (formMode === 'sua-db')  luuSuaPhongDB();
+}
+
+// ---- Preview ảnh ----
+function xemTruocAnhPhong(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const prev = document.getElementById('preview-anh-phong');
+            prev.src = e.target.result; prev.style.display = 'block';
+            document.getElementById('icon-anh-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// ---- THÊM phòng mới ----
+function luuThemPhong() {
+    const ten     = document.getElementById('inp_ten_phong').value.trim();
+    const gia     = parseInt(document.getElementById('inp_gia_thue').value);
+    const dt      = parseFloat(document.getElementById('inp_dien_tich').value) || 20;
+    const tt      = document.getElementById('inp_trang_thai').value;
+    const tmpFile = document.getElementById('inp_hinh_anh_phong');
+    const coAnh   = tmpFile.files && tmpFile.files.length > 0;
+
+    if (!ten) { alert('Vui lòng nhập tên phòng!'); document.getElementById('inp_ten_phong').focus(); return; }
+    if (!gia || gia <= 0) { alert('Vui lòng nhập giá thuê hợp lệ!'); document.getElementById('inp_gia_thue').focus(); return; }
+
+    const idx     = phongCounter++;
+    const wrapper = document.createElement('div');
+    wrapper.id    = `phong-inputs-${idx}`;
+    document.getElementById('phong-inputs-container').appendChild(wrapper);
+
+    function addHidden(name, val) {
+        const el = document.createElement('input');
+        el.type = 'hidden'; el.name = name; el.value = val;
+        wrapper.appendChild(el);
+    }
+    addHidden(`phong_ten_${idx}`,        ten);
+    addHidden(`phong_gia_${idx}`,        gia);
+    addHidden(`phong_dien_tich_${idx}`,  dt);
+    addHidden(`phong_trang_thai_${idx}`, tt);
+
+    const prevAnhSrc = document.getElementById('preview-anh-phong').src;
+    let thumbHTML = `<div class="thumb-placeholder"><i class="bi bi-image"></i></div>`;
+    if (coAnh) {
+        const realInput = document.createElement('input');
+        realInput.type = 'file'; realInput.name = `phong_hinh_anh_${idx}`; realInput.style.display = 'none';
+        try { const dt2 = new DataTransfer(); dt2.items.add(tmpFile.files[0]); realInput.files = dt2.files; }
+        catch(e) { console.warn(e); }
+        wrapper.appendChild(realInput);
+        thumbHTML = `<img src="${prevAnhSrc}" class="thumb-phong">`;
+    }
+    phongMoiData[idx] = { ten, gia, dt, tt, anhSrc: coAnh ? prevAnhSrc : null };
+
+    const rowTrong = document.getElementById('row-trong');
+    if (rowTrong) rowTrong.remove();
+
+    const badgeTT = tt === 'trong'
+        ? '<span class="badge bg-success">🟢 Trống</span>'
+        : '<span class="badge bg-warning text-dark">🔴 Đã đặt</span>';
+
+    const tr = document.createElement('tr');
+    tr.className = 'phong-moi-row'; tr.id = `phong-moi-${idx}`;
+    tr.innerHTML = `
+        <td>${thumbHTML}</td>
+        <td class="fw-bold">${ten} <span class="badge bg-info text-dark badge-moi ms-1">Mới</span></td>
+        <td class="text-danger fw-bold text-nowrap">${gia.toLocaleString('vi-VN')} đ</td>
+        <td class="text-nowrap">${dt} m²</td>
+        <td>${badgeTT}</td>
+        <td class="text-center text-nowrap">
+            <button type="button" class="btn btn-outline-primary btn-sm rounded-circle me-1"
+                    style="width:30px;height:30px;padding:0;"
+                    onclick="moFormSuaMoi(${idx})" title="Chỉnh sửa">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle"
+                    style="width:30px;height:30px;padding:0;" onclick="xoaPhongMoi(${idx})">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>`;
+    document.getElementById('bang-phong-body').appendChild(tr);
+    soPhongMoi++; capNhatBadge(); dongForm();
+}
+
+// ---- SỬA phòng MỚI (chỉ cập nhật DOM & hidden inputs) ----
+function luuSuaPhongMoi() {
+    const idx     = formEditIdx;
+    const ten     = document.getElementById('inp_ten_phong').value.trim();
+    const gia     = parseInt(document.getElementById('inp_gia_thue').value);
+    const dt      = document.getElementById('inp_dien_tich').value;
+    const tt      = document.getElementById('inp_trang_thai').value;
+    const tmpFile = document.getElementById('inp_hinh_anh_phong');
+    const coAnh   = tmpFile.files && tmpFile.files.length > 0;
+
+    if (!ten) { alert('Vui lòng nhập tên phòng!'); return; }
+    if (!gia || gia <= 0) { alert('Vui lòng nhập giá thuê hợp lệ!'); return; }
+
+    const wrapper = document.getElementById(`phong-inputs-${idx}`);
+    wrapper.querySelector(`[name="phong_ten_${idx}"]`).value         = ten;
+    wrapper.querySelector(`[name="phong_gia_${idx}"]`).value         = gia;
+    wrapper.querySelector(`[name="phong_dien_tich_${idx}"]`).value   = dt;
+    wrapper.querySelector(`[name="phong_trang_thai_${idx}"]`).value  = tt;
+
+    let thumbHTML = null;
+    if (coAnh) {
+        const prevAnhSrc = document.getElementById('preview-anh-phong').src;
+        try {
+            const dt2 = new DataTransfer(); dt2.items.add(tmpFile.files[0]);
+            let fi = wrapper.querySelector(`[name="phong_hinh_anh_${idx}"]`);
+            if (!fi) {
+                fi = document.createElement('input'); fi.type = 'file';
+                fi.name = `phong_hinh_anh_${idx}`; fi.style.display = 'none';
+                wrapper.appendChild(fi);
+            }
+            fi.files = dt2.files;
+        } catch(e) { console.warn(e); }
+        thumbHTML = `<img src="${document.getElementById('preview-anh-phong').src}" class="thumb-phong">`;
+        phongMoiData[idx].anhSrc = document.getElementById('preview-anh-phong').src;
+    }
+    phongMoiData[idx] = { ...phongMoiData[idx], ten, gia, dt, tt };
+
+    const badgeTT = tt === 'trong'
+        ? '<span class="badge bg-success">🟢 Trống</span>'
+        : '<span class="badge bg-warning text-dark">🔴 Đã đặt</span>';
+
+    const row = document.getElementById(`phong-moi-${idx}`);
+    if (thumbHTML) row.cells[0].innerHTML = thumbHTML;
+    row.cells[1].innerHTML = `<span class="fw-bold">${ten}</span> <span class="badge bg-info text-dark badge-moi ms-1">Mới</span>`;
+    row.cells[2].innerHTML = `<span class="text-danger fw-bold text-nowrap">${gia.toLocaleString('vi-VN')} đ</span>`;
+    row.cells[3].innerHTML = `<span class="text-nowrap">${dt} m²</span>`;
+    row.cells[4].innerHTML = badgeTT;
+    dongForm();
+}
+
+// ---- SỬA phòng DB (gọi AJAX) ----
+function luuSuaPhongDB() {
+    const id      = formEditDbId;
+    const ten     = document.getElementById('inp_ten_phong').value.trim();
+    const gia     = parseInt(document.getElementById('inp_gia_thue').value);
+    const dt      = document.getElementById('inp_dien_tich').value;
+    const tt      = document.getElementById('inp_trang_thai').value;
+    const tmpFile = document.getElementById('inp_hinh_anh_phong');
+
+    if (!ten) { alert('Vui lòng nhập tên phòng!'); return; }
+    if (!gia || gia <= 0) { alert('Vui lòng nhập giá thuê hợp lệ!'); return; }
+
+    const btnXN = document.getElementById('btn-xac-nhan-form');
+    btnXN.disabled = true;
+    btnXN.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+    const formData = new FormData();
+    formData.append('ten_phong',  ten);
+    formData.append('gia_thue',   gia);
+    formData.append('dien_tich',  dt);
+    formData.append('trang_thai', tt);
+    if (tmpFile.files && tmpFile.files[0]) formData.append('hinh_anh', tmpFile.files[0]);
+
+    fetch(`/admin-custom/phong/${id}/sua/`, {
+        method: 'POST', headers: { 'X-CSRFToken': getCsrf() }, body: formData
+    })
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(d => {
+        if (d.success) {
+            const row = document.getElementById(`phong-db-${id}`);
+            const prevSrc = document.getElementById('preview-anh-phong').src;
+
+            if (d.anh_url) {
+                row.cells[0].innerHTML = `<img src="${d.anh_url}" class="thumb-phong">`;
+            } else if (tmpFile.files && tmpFile.files[0] && prevSrc && !prevSrc.endsWith('#')) {
+                row.cells[0].innerHTML = `<img src="${prevSrc}" class="thumb-phong">`;
+            }
+
+            const badgeTT = tt === 'trong'
+                ? '<span class="badge bg-success">🟢 Trống</span>'
+                : '<span class="badge bg-warning text-dark">🔴 Đã đặt</span>';
+
+            row.cells[1].innerHTML = `<span class="fw-bold">${ten}</span>`;
+            row.cells[2].innerHTML = `<span class="text-danger fw-bold text-nowrap">${gia.toLocaleString('vi-VN')} đ</span>`;
+            row.cells[3].innerHTML = `<span class="text-nowrap">${dt} m²</span>`;
+            row.cells[4].innerHTML = badgeTT;
+
+            // Cập nhật data-* trên nút sửa để lần sau vẫn đúng
+            const btnSua = row.querySelector('[onclick^="moFormSuaDB"]');
+            if (btnSua) { btnSua.dataset.ten = ten; btnSua.dataset.gia = gia; btnSua.dataset.dt = dt; btnSua.dataset.tt = tt; }
+
+            dongForm();
         } else {
-            previewZone.style.display = 'none';
+            alert(d.error || 'Lỗi cập nhật phòng!');
         }
+    })
+    .catch(err => alert('Lỗi kết nối: ' + err.message))
+    .finally(() => {
+        btnXN.disabled  = false;
+        btnXN.innerHTML = '<i class="bi bi-save me-1"></i> <span id="btn-xac-nhan-text">Lưu thay đổi</span>';
+    });
+}
+
+// ---- Xóa phòng MỚI ----
+function xoaPhongMoi(idx) {
+    if (!confirm('Bỏ phòng mới này khỏi danh sách?')) return;
+    if (formMode === 'sua-moi' && formEditIdx === idx) dongForm();
+    const row = document.getElementById(`phong-moi-${idx}`);
+    if (row) row.remove();
+    const wrapper = document.getElementById(`phong-inputs-${idx}`);
+    if (wrapper) wrapper.remove();
+    delete phongMoiData[idx];
+    soPhongMoi = Math.max(0, soPhongMoi - 1); capNhatBadge();
+    const tbody = document.getElementById('bang-phong-body');
+    if (!tbody.querySelectorAll('tr').length) {
+        tbody.innerHTML = `<tr id="row-trong"><td colspan="6" class="text-center text-muted py-3">
+            <i class="bi bi-inbox me-2"></i>Chưa có phòng nào. Hãy nhấn <b>Thêm phòng</b> ở trên.</td></tr>`;
     }
-    
-    function xoaAnhDaiDien(phongId) {
-        if (confirm('Bạn có chắc chắn muốn xóa ảnh ĐẠI DIỆN của phòng trọ này?')) {
-            fetch(`/admin-custom/phongtro/${phongId}/xoa-anh-daidien/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let khuVucAnh = document.getElementById('khu-vuc-anh-dai-dien');
-                    khuVucAnh.style.transition = "0.3s";
-                    khuVucAnh.style.transform = "scale(0)";
-                    setTimeout(() => khuVucAnh.remove(), 300);
-                } else {
-                    alert('Lỗi: Không thể xóa ảnh lúc này.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
-    }
-    
-    function xoaAnhPhu(anhId) {
-        if (confirm('Bạn có chắc chắn muốn xóa bức ảnh này khỏi phòng trọ?')) {
-            fetch(`/admin-custom/phongtro/xoa-anh/${anhId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let imgElement = document.getElementById(`anh-phu-${anhId}`);
-                    imgElement.style.transition = "0.3s";
-                    imgElement.style.transform = "scale(0)";
-                    setTimeout(() => imgElement.remove(), 300);
-                } else {
-                    alert('Lỗi: Không thể xóa ảnh lúc này.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
-    }
+}
+
+// ---- Xóa phòng DB ----
+function xoaPhongDB(id) {
+    if (!confirm('Xóa phòng này? Hành động không thể hoàn tác!')) return;
+    if (formMode === 'sua-db' && formEditDbId == id) dongForm();
+    fetch(`/admin-custom/phong/${id}/xoa/`, {
+        method: 'POST', headers: { 'X-CSRFToken': getCsrf() }
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            document.getElementById(`phong-db-${id}`).remove();
+            soPhongDB = Math.max(0, soPhongDB - 1); capNhatBadge();
+            const tbody = document.getElementById('bang-phong-body');
+            if (!tbody.querySelectorAll('tr').length) {
+                tbody.innerHTML = `<tr id="row-trong"><td colspan="6" class="text-center text-muted py-3">
+                    <i class="bi bi-inbox me-2"></i>Chưa có phòng nào.</td></tr>`;
+            }
+        } else alert(d.error || 'Lỗi xóa phòng.');
+    }).catch(() => alert('Không thể kết nối server.'));
+}
+
+capNhatBadge();
 </script>
 {% endblock %}

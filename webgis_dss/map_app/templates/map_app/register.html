@@ -22,4 +22,15 @@
         </div>
     </div>
 </div>
+<!-- Dán vào cuối file register.html của bạn -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Tìm ô email trong form và khóa nó lại (read-only)
+        let emailInput = document.querySelector('input[type="email"]');
+        if(emailInput) {
+            emailInput.setAttribute('readonly', true);
+            emailInput.style.backgroundColor = '#e9ecef'; // Làm xám ô
+        }
+    });
+</script>
 {% endblock %}

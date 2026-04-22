@@ -105,6 +105,7 @@
                     <li class="nav-item"><a class="nav-link" href="{% url 'map_view' %}">Bản đồ tìm trọ</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'room_list' %}">Phòng trọ</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'news_list' %}">Tin tức</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'gioi_thieu' %}">Giới thiệu</a></li>
                 </ul>
                 
                 <ul class="navbar-nav align-items-center">
@@ -144,7 +145,7 @@
                     {% else %}
                         <li class="nav-item d-flex gap-2">
                             <a class="btn btn-outline-light rounded-pill px-4 fw-bold" href="{% url 'login' %}">Đăng nhập</a>
-                            <a class="btn btn-warning rounded-pill px-4 fw-bold text-dark shadow-sm" href="{% url 'register' %}">Đăng ký</a>
+                            <a class="btn btn-warning rounded-pill px-4 fw-bold text-dark shadow-sm" href="{% url 'dang_ky' %}">Đăng ký</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -183,8 +184,7 @@
                             <a href="{% url 'privacy' %}" class="text-white text-decoration-none opacity-75">Chính sách bảo mật</a>
                         </li>
                         <li class="mb-2">
-                            <a href="{% url 'complaint' %}" class="text-white text-decoration-none opacity-75">Giải quyết khiếu nại</a>
-                        </li>
+                            <a href="{% url 'gui_khieu_nai' %}" class="text-white text-decoration-none opacity-75">Giải quyết khiếu nại</a>
                         <li class="mb-2">
                             <a href="{% url 'faq' %}" class="text-white text-decoration-none opacity-75">Câu hỏi thường gặp</a>
                         </li>

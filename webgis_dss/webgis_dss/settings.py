@@ -149,3 +149,12 @@ STATICFILES_DIRS = [
 LOGIN_REDIRECT_URL = 'login_success' 
 LOGOUT_REDIRECT_URL = 'home'         
 LOGIN_URL = 'login'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_HOST_USER = '7777589ea23c6d'
+EMAIL_HOST_PASSWORD = '7fe32ce7af9089'
+EMAIL_PORT = '2525'
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = 'baohuynhgiasvien@gmail.com'

@@ -51,7 +51,7 @@
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold">Tiêu đề bài viết</label>
-                        <input type="text" name="tieu_de" class="form-control" value="{{ tin_tuc.tieu_de }}" placeholder="Nhập tiêu đề hấp dẫn..." required>
+                        <input type="text" name="tieu_de" class="form-control" value="{{ tin_tuc.tieu_de }}" placeholder="Nhập tiêu đề..." required>
                     </div>
                     
                     <div class="mb-3">
@@ -152,7 +152,6 @@
         }
     }
     
-    // Xóa ảnh đại diện Tin Tức
     function xoaAnhDaiDienTinTuc(tinTucId) {
         if (confirm('Bạn có chắc chắn muốn xóa ảnh ĐẠI DIỆN của bài viết này?')) {
             fetch(`/admin-custom/tintuc/${tinTucId}/xoa-anh-daidien/`, {
@@ -177,7 +176,6 @@
         }
     }
     
-    // Xóa ảnh phụ Tin Tức
     function xoaAnhPhuTinTuc(anhId) {
         if (confirm('Bạn có chắc chắn muốn xóa bức ảnh phụ này khỏi bài viết?')) {
             fetch(`/admin-custom/tintuc/xoa-anh/${anhId}/`, {

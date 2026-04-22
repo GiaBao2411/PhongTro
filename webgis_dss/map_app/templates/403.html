@@ -1,0 +1,15 @@
+{% extends 'map_app/base.html' %}
+{% block title %}403 - Truy cập bị từ chối{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center min-vh-100 d-flex flex-column justify-content-center align-items-center">
+    <i class="bi bi-shield-lock-fill text-danger mb-3" style="font-size: 7rem;"></i>
+    <h1 class="display-4 fw-bold text-danger mb-3">403 - Cấm Truy Cập</h1>
+    <p class="text-muted mb-4 fs-5">
+        Xin lỗi, bạn không có quyền truy cập vào khu vực này của hệ thống.
+    </p>
+    <button onclick="history.back()" class="btn btn-outline-danger btn-lg fw-bold rounded-pill px-5 shadow-sm">
+        <i class="bi bi-arrow-left me-2"></i> Quay lại trang trước
+    </button>
+</div>
+{% endblock %}

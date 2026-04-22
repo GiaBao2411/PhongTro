@@ -8,6 +8,13 @@
             <div class="card shadow border-0">
                 <div class="card-header bg-primary text-white fw-bold text-center">🔐 ĐĂNG NHẬP</div>
                 <div class="card-body p-4">
+                    {% if form.errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="font-size: 0.9rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            <strong>Đăng nhập thất bại!</strong> Tên đăng nhập hoặc mật khẩu không chính xác.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-3">
@@ -17,12 +24,17 @@
                         <div class="mb-3">
                             <label class="fw-bold">Mật khẩu</label>
                             <input type="password" name="password" class="form-control" required>
+                            <div class="text-end mt-2">
+                                <a href="{% url 'quen_mat_khau' %}" class="text-decoration-none small text-primary fw-bold">
+                                    <i class="bi bi-question-circle"></i> Quên mật khẩu?
+                                </a>
+                            </div>
                         </div>
-                        <input type="hidden" name="next" value="{% url 'admin_dashboard' %}">
+                        
                         <button type="submit" class="btn btn-primary w-100 fw-bold">ĐĂNG NHẬP</button>
                     </form>
                     <div class="text-center mt-3">
-                        Chưa có tài khoản? <a href="{% url 'register' %}" class="fw-bold">Đăng ký ngay</a>
+                        Chưa có tài khoản? <a href="{% url 'dang_ky' %}" class="fw-bold">Đăng ký ngay</a>
                     </div>
                 </div>
             </div>
