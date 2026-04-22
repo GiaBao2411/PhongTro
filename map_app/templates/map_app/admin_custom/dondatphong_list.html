@@ -1,0 +1,79 @@
+{% extends 'map_app/admin_custom/admin_base.html' %}
+{% load humanize %}
+{% block title %}Quản Lý Đơn Đặt Phòng{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-card-checklist"></i> Quản Lý Đơn Đặt Phòng</h4>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="py-3 ps-4">Mã Đơn</th>
+                        <th>Người Thuê</th>
+                        <th>Phòng Trọ</th>
+                        <th>Ngày Vào</th>
+                        <th>Tiền Cọc</th>
+                        <th>Trạng Thái</th>
+                        <th class="text-center pe-4">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for don in danh_sach_don %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-primary">#{{ don.id }}</td>
+                        <td>
+                            <div class="fw-bold">{{ don.nguoi_thue.username }}</div>
+                            <small class="text-muted">{{ don.nguoi_thue.email }}</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'room_detail' don.phong.id %}" target="_blank" class="fw-bold text-dark text-decoration-none">
+                                {{ don.phong.ten|truncatechars:30 }}
+                            </a>
+                        </td>
+                        <td>{{ don.ngay_don_vao|date:"d/m/Y" }}</td>
+                        <td class="text-danger fw-bold">{{ don.tien_coc|floatformat:0|intcomma }} đ</td>
+                        <td>
+                            <form action="{% url 'custom_admin_duyet_don' don.id %}" method="POST" class="d-flex gap-2">
+                                {% csrf_token %}
+                                
+                                <select name="trang_thai" class="form-select form-select-sm shadow-none 
+                                    {% if don.trang_thai == 'cho_xac_nhan' %}bg-warning text-dark
+                                    {% elif don.trang_thai == 'cho_duyet' %}bg-info text-dark
+                                    {% elif don.trang_thai == 'thanh_cong' %}bg-success text-white
+                                    {% else %}bg-secondary text-white{% endif %} fw-bold" 
+                                    style="width: 140px; border: none;" 
+                                    onchange="this.form.submit()">
+                                    
+                                    <option value="cho_xac_nhan" {% if don.trang_thai == 'cho_xac_nhan' %}selected{% endif %}>Chờ xác nhận</option>
+                                    <option value="cho_duyet" {% if don.trang_thai == 'cho_duyet' %}selected{% endif %}>Chờ duyệt (Đã CK)</option>
+                                    <option value="thanh_cong" {% if don.trang_thai == 'thanh_cong' %}selected{% endif %}>Thành công</option>
+                                    <option value="da_huy" {% if don.trang_thai == 'da_huy' %}selected{% endif %}>Đã hủy</option>
+                                </select>
+                                
+                                </form>
+                        </td>
+                        <td class="text-center pe-4">
+                            <a href="{% url 'custom_admin_xoa_don' don.id %}" class="btn btn-sm btn-outline-danger" 
+                               onclick="return confirm('Bạn có chắc chắn muốn xóa đơn đặt phòng này không?');" title="Xóa">
+                                <i class="bi bi-trash-fill"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i> Chưa có đơn đặt phòng nào.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

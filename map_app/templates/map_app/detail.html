@@ -1,0 +1,339 @@
+{% extends 'map_app/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ phong.ten }} - Chi tiết{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .navbar {
+        z-index: 1050 !important; 
+    }
+    .dropdown-menu {
+        z-index: 2000 !important;
+    }
+    .thumb-indicator { width: 90px; height: 65px; object-fit: cover; border-radius: 8px; cursor: pointer; opacity: 0.5; transition: 0.2s; border: 2px solid transparent; flex-shrink: 0; }
+    .thumb-indicator.active, .thumb-indicator:hover { opacity: 1; border-color: #198754; }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    
+    /* Style mới cho danh sách phòng con có ảnh */
+    .room-item-box { transition: 0.3s; border: 1px solid #eee !important; }
+    .room-item-box:hover { border-color: #198754 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important; }
+    .room-img-thumbnail { width: 100px; height: 75px; object-fit: cover; border-radius: 8px; }
+    
+    #map-detail { height: 350px; border-radius: 15px; border: 1px solid #ddd; z-index: 1; }
+</style>
+
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'room_list' %}" class="text-decoration-none">Danh sách phòng</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Chi tiết phòng</li>
+        </ol>
+    </nav>
+
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show shadow-sm border-0 rounded-4 d-flex align-items-center" role="alert">
+                {% if message.tags == 'error' %}
+                    <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                {% else %}
+                    <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+                {% endif %}
+                <div>
+                    <strong>Thông báo:</strong> {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="row g-5">
+        <div class="col-lg-7">
+            <div id="roomCarousel" class="carousel slide shadow-sm rounded-4 overflow-hidden" data-bs-ride="carousel">
+                <div class="carousel-inner" style="height: 450px;">
+                    {% if phong.hinh_anh %}
+                    <div class="carousel-item active h-100">
+                        <img src="{{ phong.hinh_anh.url }}" class="d-block w-100 h-100" style="object-fit: cover;" alt="Ảnh chính">
+                    </div>
+                    {% else %}
+                    <div class="carousel-item active h-100">
+                        <div class="bg-light d-flex align-items-center justify-content-center h-100">
+                            <span class="text-muted">Không có hình ảnh</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% for anh_phu in phong.danh_sach_anh.all %}
+                    <div class="carousel-item h-100">
+                        <img src="{{ anh_phu.hinh_anh.url }}" class="d-block w-100 h-100" style="object-fit: cover;" alt="Ảnh phụ">
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if phong.danh_sach_anh.all %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#roomCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon p-3 rounded-circle" style="background-color: rgba(0,0,0,0.5);" aria-hidden="true"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#roomCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon p-3 rounded-circle" style="background-color: rgba(0,0,0,0.5);" aria-hidden="true"></span>
+                </button>
+                {% endif %}
+            </div>
+
+            {% if phong.danh_sach_anh.all %}
+            <div class="mt-3 d-flex gap-2 overflow-auto custom-scrollbar pb-2">
+                <img src="{{ phong.hinh_anh.url }}" data-bs-target="#roomCarousel" data-bs-slide-to="0" class="thumb-indicator active" alt="Thumb">
+                {% for anh_phu in phong.danh_sach_anh.all %}
+                <img src="{{ anh_phu.hinh_anh.url }}" data-bs-target="#roomCarousel" data-bs-slide-to="{{ forloop.counter }}" class="thumb-indicator" alt="Thumb">
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="mt-4">
+                <h4 class="fw-bold border-bottom pb-2">Mô tả</h4>
+                <p class="text-secondary" style="white-space: pre-line; line-height: 1.8;">
+                    {{ phong.mo_ta|default:"Chủ trọ chưa cập nhật mô tả cho khu trọ này." }}
+                </p>
+            </div>
+
+            <div class="mt-5">
+                <h4 class="fw-bold border-bottom pb-2 mb-4">Đánh giá từ người thuê</h4>
+                {% for dg in phong.danh_sach_danh_gia.all %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-primary"><i class="bi bi-person-circle me-1"></i> {{ dg.nguoi_danh_gia.username }}</strong>
+                        <span class="text-warning">
+                            {% for i in "12345"|make_list %}
+                                <i class="bi {% if forloop.counter <= dg.so_sao %}bi-star-fill{% else %}bi-star{% endif %}"></i>
+                            {% endfor %}
+                        </span>
+                    </div>
+                    <p class="mb-1 mt-2 text-dark">{{ dg.noi_dung }}</p>
+                    <small class="text-muted"><i class="bi bi-clock"></i> {{ dg.ngay_tao|date:"d/m/Y - H:i" }}</small>
+                </div>
+                {% empty %}
+                    <p class="text-muted fst-italic">Chưa có đánh giá nào. Hãy là người đầu tiên trải nghiệm và chia sẻ!</p>
+                {% endfor %}
+
+                {% if request.user.is_authenticated %}
+                    {% if da_danh_gia %}
+                        <div class="alert alert-info rounded-4 border-0 shadow-sm text-center py-4 mt-4">
+                            <i class="bi bi-heart-fill text-danger fs-3 mb-2 d-block"></i>
+                            <h6 class="fw-bold mb-1">Bạn đã đánh giá khu trọ này!</h6>
+                            <p class="text-muted small mb-0">Cảm ơn bạn đã chia sẻ trải nghiệm để cộng đồng SmartRent ngày một tốt hơn.</p>
+                        </div>
+                    {% else %}
+                        <div class="card bg-light border-0 mt-4 p-4 rounded-4 shadow-sm">
+                            <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-pencil-square me-2"></i>Viết đánh giá của bạn</h6>
+                            <form action="{% url 'gui_danh_gia' phong.id %}" method="POST">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted">Chất lượng khu trọ (Số sao):</label>
+                                    <select name="so_sao" class="form-select shadow-none border-0" style="width: 200px;">
+                                        <option value="5">⭐⭐⭐⭐⭐ Tuyệt vời</option>
+                                        <option value="4">⭐⭐⭐⭐ Tốt</option>
+                                        <option value="3">⭐⭐⭐ Bình thường</option>
+                                        <option value="2">⭐⭐ Tệ</option>
+                                        <option value="1">⭐ Rất tệ</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <textarea name="noi_dung" class="form-control shadow-none border-0" rows="3" placeholder="Chia sẻ trải nghiệm của bạn về khu trọ này để giúp những người thuê sau nhé..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm">Gửi đánh giá</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning mt-3 rounded-4 border-0 shadow-sm d-flex align-items-center">
+                        <i class="bi bi-exclamation-circle-fill fs-4 me-3"></i>
+                        <div>
+                            Vui lòng <a href="{% url 'login' %}" class="fw-bold text-decoration-none text-danger">Đăng nhập</a> để gửi đánh giá về khu trọ này.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow rounded-4 p-4 sticky-top" style="top: 20px;">
+                <h2 class="fw-bold mb-3">{{ phong.ten }}</h2>
+                
+                <div class="d-flex gap-2 mb-4">
+                    <div class="p-2 bg-light rounded-3 text-center flex-fill border shadow-sm">
+                        <small class="text-muted d-block small">Quy mô</small>
+                        <span class="fw-bold">{{ phong.danh_sach_phong.count }} phòng</span>
+                    </div>
+                    <div class="p-2 bg-light rounded-3 text-center flex-fill border border-success border-opacity-25 shadow-sm">
+                        <small class="text-muted d-block small">Còn trống</small>
+                        <span class="fw-bold text-success">{{ phong_trong.count }} phòng</span>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center mb-3 text-danger">
+                    <h4 class="fw-bold me-2 mb-0">Giá từ: {{ phong.gia_thue|floatformat:0|intcomma }} VNĐ/tháng</h4>
+                </div>
+
+                <div class="d-flex align-items-start mb-3">
+                    <i class="bi bi-geo-alt-fill text-secondary fs-5 me-2 mt-1"></i>
+                    <span class="fw-medium text-dark">{{ phong.dia_chi }}</span>
+                </div>
+
+                <hr>
+
+                <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-door-open-fill me-2"></i>Chọn phòng còn trống:</h5>
+                <div class="room-list-container mb-4 pr-2" style="max-height: 450px; overflow-y: auto;">
+                    {% for p in phong.danh_sach_phong.all %}
+                    <div class="room-item-box rounded-4 p-3 mb-3 bg-white shadow-sm {% if p.trang_thai == 'da_dat' %}opacity-50{% endif %}">
+                        <div class="d-flex gap-3">
+                            {% if p.hinh_anh %}
+                                <img src="{{ p.hinh_anh.url }}" class="room-img-thumbnail shadow-sm">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center room-img-thumbnail">
+                                    <i class="bi bi-camera text-muted fs-4"></i>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold text-dark mb-1">{{ p.ten_phong }}</h6>
+                                <small class="text-muted d-block mb-1"><i class="bi bi-rulers me-1"></i>{{ p.dien_tich }} m²</small>
+                                <div class="text-danger fw-bold">{{ p.gia_thue|floatformat:0|intcomma }} đ</div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                            {% if p.trang_thai == 'trong' %}
+                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill">🟢 Còn trống</span>
+                                <a href="{% url 'dat_phong' p.id %}" class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm">
+                                    Đặt phòng này
+                                </a>
+                            {% else %}
+                                <span class="badge bg-secondary rounded-pill">🔴 Đã đặt</span>
+                                <button class="btn btn-sm btn-light disabled rounded-pill">Hết phòng</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning py-3 text-center rounded-4 border-0 shadow-sm">
+                        <i class="bi bi-emoji-frown fs-4 d-block mb-2 text-warning"></i> 
+                        <strong>Rất tiếc!</strong><br>Hiện tại khu trọ này đã hết phòng trống.
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success btn-lg fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLienHe">
+                        <i class="bi bi-telephone-fill me-2"></i> Liên hệ chủ trọ
+                    </button>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'map_view' %}?q={{ phong.dia_chi|urlencode }}" class="btn btn-outline-dark fw-bold flex-grow-1">
+                            <i class="bi bi-map-fill me-2"></i> Xem bản đồ
+                        </a>
+                        <button class="btn {% if request.user in phong.favorites.all %}btn-danger{% else %}btn-outline-danger{% endif %} fw-bold flex-grow-1" 
+                                id="btnDetailFav" data-id="{{ phong.id }}" onclick="toggleDetailFavorite(this)">
+                            {% if request.user in phong.favorites.all %}
+                                <i class="bi bi-heart-fill me-1"></i> Đã yêu thích
+                            {% else %}
+                                <i class="bi bi-heart me-1"></i> Yêu thích
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalLienHe" tabindex="-1" aria-labelledby="modalLienHeLabel" aria-hidden="true"></div>
+
+<style>
+    .thumb-indicator {
+        width: 90px;
+        height: 65px;
+        object-fit: cover;
+        border-radius: 8px;
+        cursor: pointer;
+        opacity: 0.5;
+        transition: all 0.2s ease-in-out;
+        border: 2px solid transparent;
+        flex-shrink: 0;
+    }
+    .thumb-indicator.active, .thumb-indicator:hover {
+        opacity: 1;
+        border-color: #0d6efd;
+    }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    
+    /* Làm đẹp thanh cuộn cho danh sách phòng */
+    .room-list-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    .room-list-container::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+        border-radius: 10px;
+    }
+    .room-list-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1; 
+        border-radius: 10px;
+    }
+    .room-list-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8; 
+    }
+    .room-list-container .border:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+</style>
+
+<script>
+    var myCarousel = document.getElementById('roomCarousel')
+    if(myCarousel) {
+        myCarousel.addEventListener('slide.bs.carousel', function (e) {
+            var index = e.to; 
+            document.querySelectorAll('.thumb-indicator').forEach(function(img, i) {
+                if(i === index) {
+                    img.classList.add('active'); 
+                } else {
+                    img.classList.remove('active'); 
+                }
+            });
+        });
+    }
+
+    function toggleDetailFavorite(btn) {
+        const roomId = btn.getAttribute('data-id');
+        const isUserLoggedIn = "{{ request.user.is_authenticated }}";
+        if (isUserLoggedIn === "False") {
+            alert("Bạn cần đăng nhập để lưu khu trọ này!");
+            window.location.href = "{% url 'login' %}";
+            return;
+        }
+
+        fetch(`/api/toggle-favorite/${roomId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let icon = btn.querySelector('i');
+                if (data.liked) {
+                    btn.classList.remove('btn-outline-danger');
+                    btn.classList.add('btn-danger');
+                    btn.innerHTML = '<i class="bi bi-heart-fill me-1"></i> Đã yêu thích';
+                } else {
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-outline-danger');
+                    btn.innerHTML = '<i class="bi bi-heart me-1"></i> Yêu thích';
+                }
+            } else {
+                alert("Có lỗi xảy ra: " + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

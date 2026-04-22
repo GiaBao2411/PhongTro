@@ -1,0 +1,111 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Giới thiệu về SmartRent{% endblock %}
+
+{% block content %}
+<div class="bg-primary text-white py-5 text-center position-relative overflow-hidden">
+    <div class="container position-relative" style="z-index: 2;">
+        <h1 class="display-4 fw-bold mb-3"><i class="bi bi-building-check me-2"></i>SmartRent</h1>
+        <p class="lead mb-0">Nền tảng tìm kiếm và quản lý phòng trọ thông minh tích hợp bản đồ số WebGIS.</p>
+    </div>
+    <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark" style="opacity: 0.1;"></div>
+</div>
+
+<div class="container py-5">
+    <div class="row align-items-center mb-5 pb-4 border-bottom">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <h2 class="fw-bold text-primary mb-3">Về Hệ Thống Của Chúng Tôi</h2>
+            <p class="text-muted" style="line-height: 1.8; text-align: justify;">
+                Hành trình tìm kiếm một không gian sống phù hợp luôn là nỗi trăn trở lớn đối với sinh viên và người lao động. Thấu hiểu được những khó khăn trong việc xác định vị trí, đánh giá tiện ích xung quanh và thời gian di chuyển thực tế, <strong>SmartRent</strong> đã ra đời.
+            </p>
+            <p class="text-muted" style="line-height: 1.8; text-align: justify;">
+                Đây không chỉ là một website đăng tin phòng trọ thông thường. SmartRent là một <strong>Đồ án WebGIS</strong> được xây dựng với mục tiêu số hóa và trực quan hóa dữ liệu phòng trọ, giúp người dùng trải nghiệm việc tìm nhà trên một bản đồ tương tác thông minh, minh bạch và chính xác.
+            </p>
+        </div>
+        <div class="col-lg-6 text-center">
+            <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Mô hình SmartRent" class="img-fluid rounded-4 shadow-lg">
+        </div>
+    </div>
+
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-dark mb-2">Điểm Khác Biệt Của SmartRent</h2>
+        <p class="text-muted">Áp dụng công nghệ Hệ thống Thông tin Địa lý (GIS) vào thực tiễn.</p>
+    </div>
+
+    <div class="row g-4 mb-5 pb-4 border-bottom">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card rounded-4">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box bg-light text-primary rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                        <i class="bi bi-geo-alt-fill fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold">Bản Đồ Tương Tác Trực Quan</h5>
+                    <p class="text-muted small">Hiển thị trực tiếp các phòng trọ trên nền bản đồ số. Dễ dàng quan sát không gian xung quanh, đường đi và các tiện ích khu vực chỉ với thao tác kéo thả.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card rounded-4">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box bg-light text-danger rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                        <i class="bi bi-stopwatch-fill fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold">Phân Tích Đẳng Thời (Isochrone)</h5>
+                    <p class="text-muted small">Khác biệt hoàn toàn! Hệ thống cho phép tìm phòng trọ dựa trên <strong>thời gian di chuyển</strong> thực tế (đi bộ, xe máy) thay vì chỉ tìm theo khoảng cách chim bay.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card rounded-4">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box bg-light text-success rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                        <i class="bi bi-shield-check fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold">Đặt Phòng & Quản Lý Kín Kẽ</h5>
+                    <p class="text-muted small">Quy trình đặt cọc, thanh toán mã QR trực tuyến, hệ thống duyệt đơn và gửi Email tự động giúp tối ưu hóa việc quản lý cho cả chủ trọ và người thuê.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-dark mb-2">Đội Ngũ Phát Triển</h2>
+        <p class="text-muted">Những người đứng sau những dòng code của SmartRent.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-light">
+                <div class="card-body p-4 text-center">
+                    <h4 class="fw-bold text-primary mb-3">Nhóm 2 - Đồ Án WebGIS</h4>
+                    <p class="text-muted mb-4">
+                        Dự án này là tâm huyết của toàn bộ các thành viên trong nhóm, với mong muốn áp dụng những kiến thức lập trình Web (Django, Bootstrap) và lý thuyết Không gian Địa lý (PostGIS, OpenRouteService) học được trên giảng đường vào một sản phẩm thực tế, có tính ứng dụng cao.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill"><i class="bi bi-code-slash me-1"></i> Python Django</span>
+                        <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill"><i class="bi bi-database me-1"></i> PostgreSQL & PostGIS</span>
+                        <span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill"><i class="bi bi-pin-map me-1"></i> ORS API</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* CSS hiệu ứng cho đẹp mắt */
+    .feature-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+    }
+    .icon-box {
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .feature-card:hover .icon-box {
+        background-color: #0d6efd !important;
+        color: white !important;
+    }
+</style>
+{% endblock %}

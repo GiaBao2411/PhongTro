@@ -1,0 +1,176 @@
+{% extends 'map_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tất Cả Phòng Trọ{% endblock %}
+
+{% block content %}
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary">Tất Cả Phòng Trọ Hiện Có</h2>
+            <p class="text-muted">Danh sách {% if rooms.paginator %}{{ rooms.paginator.count }}{% else %}{{ rooms|length }}{% endif %} phòng trọ đang cho thuê trên hệ thống.</p>
+        </div>
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-10">
+                <form method="GET" action="{% url 'room_list' %}" class="row g-2 bg-white p-3 rounded-4 shadow-sm border">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control border-start-0 ps-0 shadow-none" 
+                                   placeholder="Tìm tên phòng hoặc khu vực..." value="{{ search_query }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select name="price" class="form-select shadow-none border-light text-muted">
+                            <option value="">Tất cả mức giá</option>
+                            <option value="under_2m" {% if price_filter == 'under_2m' %}selected{% endif %}>Dưới 2 triệu</option>
+                            <option value="2m_5m" {% if price_filter == '2m_5m' %}selected{% endif %}>2 - 5 triệu</option>
+                            <option value="above_5m" {% if price_filter == 'above_5m' %}selected{% endif %}>Trên 5 triệu</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">Lọc</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row g-4">
+            {% for phong in rooms %}
+            <div class="col-md-4 col-sm-6">
+                <div class="card room-card h-100 shadow-sm border-0 position-relative">
+                    <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm btn-favorite" 
+                            data-id="{{ phong.id }}" 
+                            onclick="toggleFavorite(this)"
+                            style="z-index: 10; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"
+                            title="Lưu tin này">
+                        {% if request.user in phong.favorites.all %}
+                            <i class="bi bi-heart-fill text-danger fs-5"></i>
+                        {% else %}
+                            <i class="bi bi-heart text-secondary fs-5"></i>
+                        {% endif %}
+                    </button>
+
+                    <div class="room-img-wrapper" style="height: 220px; overflow: hidden; position: relative;">
+                        <a href="{% url 'room_detail' phong.id %}">
+                            {% if phong.hinh_anh %}
+                                <img src="{{ phong.hinh_anh.url }}" class="w-100 h-100" style="object-fit: cover; transition: 0.5s;">
+                            {% else %}
+                                <div class="bg-secondary text-white h-100 d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-image" style="font-size: 40px;"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+                        <div class="position-absolute bottom-0 end-0 m-2 bg-danger text-white px-3 py-1 rounded-pill fw-bold shadow-sm">
+                            {{ phong.gia_thue|floatformat:0|intcomma }} đ
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <a href="{% url 'room_detail' phong.id %}" class="text-decoration-none text-dark">
+                            <h5 class="card-title fw-bold text-truncate">{{ phong.ten }}</h5>
+                        </a>
+                        <p class="text-muted small mb-2 text-truncate">
+                            <i class="bi bi-geo-alt-fill text-danger"></i> {{ phong.dia_chi }}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-rulers"></i> {{ phong.dien_tich|default:"--" }} m²
+                            </span>
+                            <a href="{% url 'room_detail' phong.id %}" class="text-primary fw-bold text-decoration-none small">
+                                Xem chi tiết <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">Không tìm thấy phòng trọ nào phù hợp với yêu cầu của bạn.</p>
+                    <a href="{% url 'room_list' %}" class="btn btn-outline-primary rounded-pill">Xem tất cả phòng</a>
+                </div>
+            {% endfor %}
+            
+            {% if rooms.has_other_pages %}
+            <div class="d-flex justify-content-center mt-5 mb-4">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination shadow-sm bg-white rounded-pill px-3 py-2 align-items-center mb-0">
+                        
+                        {% if rooms.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link text-secondary border-0 bg-transparent" href="?page={{ rooms.previous_page_number }}&search={{ search_query }}&price={{ price_filter }}">&laquo; Trước</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link text-muted border-0 bg-transparent">&laquo; Trước</span>
+                            </li>
+                        {% endif %}
+
+                        {% for i in rooms.paginator.page_range %}
+                            {% if rooms.number == i %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link text-primary fw-medium border-0 rounded-circle mx-1 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background-color: #e6f2ff;">{{ i }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link text-secondary border-0 rounded-circle mx-1 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; background-color: transparent;" href="?page={{ i }}&search={{ search_query }}&price={{ price_filter }}">{{ i }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if rooms.has_next %}
+                            <li class="page-item">
+                                <a class="page-link text-secondary border-0 bg-transparent" href="?page={{ rooms.next_page_number }}&search={{ search_query }}&price={{ price_filter }}">Tiếp &raquo;</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link text-muted border-0 bg-transparent">Tiếp &raquo;</span>
+                            </li>
+                        {% endif %}
+                        
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFavorite(btn) {
+        const roomId = btn.getAttribute('data-id');
+        const isUserLoggedIn = "{{ request.user.is_authenticated }}";
+        if (isUserLoggedIn === "False") {
+            alert("Bạn cần đăng nhập để lưu phòng trọ!");
+            window.location.href = "{% url 'login' %}";
+            return;
+        }
+        fetch(`/api/toggle-favorite/${roomId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let icon = btn.querySelector('i');
+                if (data.liked) {
+                    icon.classList.remove('bi-heart', 'text-secondary');
+                    icon.classList.add('bi-heart-fill', 'text-danger');
+                } else {
+                    icon.classList.remove('bi-heart-fill', 'text-danger');
+                    icon.classList.add('bi-heart', 'text-secondary');
+                }
+            }
+        });
+    }
+</script>
+
+<style>
+    .room-card:hover { transform: translateY(-5px); }
+    .room-card:hover img { transform: scale(1.1); }
+    .pagination .page-link:hover {
+        background-color: #f8f9fa !important;
+        color: #0d6efd !important;
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}

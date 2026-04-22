@@ -1,0 +1,36 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Đăng Ký Thành Viên{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow border-0">
+                <div class="card-header bg-success text-white fw-bold text-center">📝 ĐĂNG KÝ MỚI</div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        
+                        <button type="submit" class="btn btn-success w-100 fw-bold mt-3">HOÀN TẤT ĐĂNG KÝ</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        Đã có tài khoản? <a href="{% url 'login' %}" class="fw-bold">Đăng nhập</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Dán vào cuối file register.html của bạn -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Tìm ô email trong form và khóa nó lại (read-only)
+        let emailInput = document.querySelector('input[type="email"]');
+        if(emailInput) {
+            emailInput.setAttribute('readonly', true);
+            emailInput.style.backgroundColor = '#e9ecef'; // Làm xám ô
+        }
+    });
+</script>
+{% endblock %}

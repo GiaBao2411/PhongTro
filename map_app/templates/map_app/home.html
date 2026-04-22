@@ -1,0 +1,304 @@
+{% extends 'map_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Trang Chủ - Hệ Thống SmartRent{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section { background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('{% static "images/banner.jpg" %}'); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 100px 0; color: white; text-align: center; margin-bottom: 30px; position: relative; }
+    .search-box-glass { background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; max-width: 800px; margin: 40px auto 0; box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+    .room-card { border: none; border-radius: 12px; overflow: hidden; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%; background: white; position: relative; }
+    .room-card:hover { transform: translateY(-10px); box-shadow: 0 20px 30px rgba(0,0,0,0.15); }
+    .room-img-wrapper { position: relative; height: 220px; overflow: hidden; }
+    .room-img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+    .room-card:hover .room-img { transform: scale(1.1); }
+    .price-badge { position: absolute; bottom: 10px; right: 10px; background: #d32f2f; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .feature-box { padding: 30px; border-radius: 15px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; height: 100%; border-bottom: 4px solid transparent; }
+    .feature-box:hover { transform: translateY(-5px); border-bottom-color: #1a237e; }
+    .icon-circle { width: 70px; height: 70px; background: #e8eaf6; color: #1a237e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 20px; }
+    .stats-section { background: #1a237e; color: white; padding: 60px 0; }
+    .stat-number { font-size: 3rem; font-weight: bold; color: #ffca28; }
+    .accordion-button:not(.collapsed) { color: #1a237e; background-color: #e8eaf6; font-weight: bold; }
+    .accordion-button:focus { box-shadow: none; border-color: rgba(0,0,0,.125); }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="hero-section">
+        <div class="container">
+            <span class="badge bg-warning text-dark mb-3 px-3 py-2 fw-bold">🚀 CÔNG NGHỆ GIS 2026</span>
+            <h1 class="display-3 fw-bold mb-3">Tìm Trọ Thông Minh & Chính Xác</h1>
+            <p class="lead mb-4 opacity-75">Không còn nỗi lo kẹt xe. Tìm phòng trọ dựa trên thời gian di chuyển thực tế.</p>
+            
+            <div class="search-box-glass text-dark text-start">
+                <h5 class="fw-bold mb-3"><i class="bi bi-search"></i> Bạn muốn tìm trọ ở đâu?</h5>
+                
+                <div class="row g-2">
+                    <div class="col-md-9 position-relative">
+                        <input type="text" id="homeSearchInput" 
+                               class="form-control form-control-lg bg-light border-0" 
+                               autocomplete="off"
+                               placeholder="Nhập địa điểm (Vd: Quận 10, ĐH Bách Khoa)..."
+                               onkeypress="handleEnter(event)">
+                        
+                        <ul id="suggestionBox" class="list-group position-absolute w-100 shadow rounded-3 mt-1" 
+                            style="display: none; z-index: 1050; max-height: 250px; overflow-y: auto; left: 0;">
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <button onclick="goToMap()" class="btn btn-danger btn-lg w-100 fw-bold shadow">
+                            TÌM KIẾM NGAY
+                        </button>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="searchLat">
+                <input type="hidden" id="searchLng">
+                <div class="mt-3 small text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> Gợi ý: Quận 1, Bách Khoa, Hàng Xanh...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <div class="text-center mb-5"><h2 class="fw-bold text-primary">Tại Sao Chọn SmartRent?</h2></div>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="feature-box"><div class="icon-circle"><i class="bi bi-map-fill"></i></div><h4>Bản Đồ Isochrone</h4><p class="text-muted">Biết chính xác vùng phục vụ theo thời gian.</p></div></div>
+            <div class="col-md-4"><div class="feature-box"><div class="icon-circle"><i class="bi bi-shield-check"></i></div><h4>Thông Tin Xác Thực</h4><p class="text-muted">Dữ liệu phòng trọ được kiểm duyệt kỹ càng.</p></div></div>
+            <div class="col-md-4"><div class="feature-box"><div class="icon-circle"><i class="bi bi-lightning-charge-fill"></i></div><h4>Dẫn Đường Tối Ưu</h4><p class="text-muted">Thuật toán tránh kẹt xe thông minh.</p></div></div>
+        </div>
+    </div>
+
+    {# ===================== PHÒNG TRỌ MỚI NHẤT ===================== #}
+    <div class="bg-light py-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <h2 class="fw-bold text-dark">Phòng Trọ Mới Nhất 🌟</h2>
+                <a href="{% url 'room_list' %}" class="btn btn-outline-primary btn-sm fw-bold">
+                    Tất cả phòng trọ <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="row g-4">
+                {% for phong in rooms %}
+                <div class="col-md-4">
+                    <div class="card room-card h-100">
+
+                        {# Nút yêu thích #}
+                        <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm btn-favorite" 
+                                data-id="{{ phong.id }}" 
+                                onclick="toggleFavorite(this)"
+                                style="z-index:10;width:40px;height:40px;display:flex;align-items:center;justify-content:center;"
+                                title="Lưu tin này">
+                            {% if request.user in phong.favorites.all %}
+                                <i class="bi bi-heart-fill text-danger fs-5"></i>
+                            {% else %}
+                                <i class="bi bi-heart text-secondary fs-5"></i>
+                            {% endif %}
+                        </button>
+
+                        {# Ảnh đại diện #}
+                        <div class="room-img-wrapper">
+                            <a href="{% url 'room_detail' phong.id %}">
+                                {% if phong.hinh_anh %}
+                                    <img src="{{ phong.hinh_anh.url }}" class="room-img">
+                                {% else %}
+                                    <div class="bg-secondary text-white h-100 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-image" style="font-size:40px;"></i>
+                                    </div>
+                                {% endif %}
+                            </a>
+                            {# ✅ Dùng gia_thap_nhat thay vì gia_thue (đã được gán đúng trong view) #}
+                            <div class="price-badge">
+                                từ {{ phong.gia_thap_nhat|floatformat:0|intcomma }} đ
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <a href="{% url 'room_detail' phong.id %}" class="text-decoration-none text-dark">
+                                <h5 class="card-title fw-bold text-truncate">{{ phong.ten_nha }}</h5>
+                            </a>
+                            <p class="text-muted small mb-2 text-truncate">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> {{ phong.dia_chi }}
+                            </p>
+
+                            {# ✅ Hiện số phòng trống thay vì dien_tich (vì NhaTro không có field này) #}
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                        <i class="bi bi-door-open"></i> {{ phong.so_phong_trong }} trống
+                                    </span>
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-grid"></i> {{ phong.tong_so_phong }} phòng
+                                    </span>
+                                </div>
+                                <a href="{% url 'room_detail' phong.id %}" 
+                                   class="text-primary fw-bold text-decoration-none small">
+                                    Xem chi tiết <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">Hiện chưa có phòng nào.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {# ===================== END PHÒNG TRỌ ===================== #}
+
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-primary">Câu Hỏi Thường Gặp <i class="bi bi-question-circle-fill"></i></h2>
+            <p class="text-muted">Giải đáp những thắc mắc phổ biến của người dùng</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="accordion shadow-sm" id="faqAccordion">
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                1. Tìm trọ theo "Thời gian di chuyển" là gì?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Thay vì tìm theo bán kính (km) không chính xác, hệ thống của chúng tôi tính toán dựa trên <strong>tốc độ thực tế</strong> của xe máy tại TP.HCM. Bạn chỉ cần nhập "15 phút", chúng tôi sẽ vẽ ra vùng bạn có thể đi tới trong 15 phút, giúp bạn chọn trọ không bao giờ lo đi học muộn!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                2. Tôi có mất phí khi tìm phòng trọ không?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                <strong>Hoàn toàn miễn phí!</strong> SmartRent là nền tảng kết nối miễn phí giữa sinh viên và chủ nhà trọ. Bạn có thể tìm kiếm, xem bản đồ và liên hệ chủ nhà mà không tốn bất kỳ chi phí nào.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                3. Làm sao để biết phòng trọ còn trống hay không?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Chúng tôi nỗ lực cập nhật dữ liệu liên tục. Tuy nhiên, để chắc chắn nhất, bạn nên nhấn nút <strong>"Xem chi tiết"</strong> để lấy số điện thoại và gọi điện xác nhận trực tiếp với chủ trọ trước khi đến xem phòng nhé.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
+                                4. Tôi muốn đăng tin cho thuê phòng thì làm sao?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Nếu bạn là chủ trọ, vui lòng liên hệ với Admin qua email hoặc hotline để được hỗ trợ đăng tin xác thực lên bản đồ nhé. Tính năng đăng tin tự động đang được bảo trì để nâng cấp chất lượng.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const searchInput = document.getElementById('homeSearchInput');
+            const suggestionBox = document.getElementById('suggestionBox');
+            const latInput = document.getElementById('searchLat');
+            const lngInput = document.getElementById('searchLng');
+            let timeoutId;
+
+            searchInput.addEventListener('input', function() {
+                clearTimeout(timeoutId);
+                const query = this.value;
+                if (query.length < 2) { suggestionBox.style.display = 'none'; return; }
+
+                timeoutId = setTimeout(() => {
+                    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&countrycodes=vn`;
+                    fetch(url).then(res => res.json()).then(data => {
+                        suggestionBox.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item list-group-item-action text-start py-2';
+                                li.style.cursor = 'pointer';
+                                let diaChiGoiY = item.display_name.replace(', Việt Nam', '').replace(', Vietnam', '');
+                                li.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-2"></i> ${diaChiGoiY}`;
+                                li.onclick = function() {
+                                    searchInput.value = diaChiGoiY;
+                                    latInput.value = item.lat;
+                                    lngInput.value = item.lon;
+                                    suggestionBox.style.display = 'none';
+                                };
+                                suggestionBox.appendChild(li);
+                            });
+                            suggestionBox.style.display = 'block';
+                        } else { suggestionBox.style.display = 'none'; }
+                    }).catch(err => console.error('Lỗi API:', err));
+                }, 500);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionBox.contains(e.target))
+                    suggestionBox.style.display = 'none';
+            });
+        });
+
+        function goToMap() {
+            var keyword = document.getElementById('homeSearchInput').value;
+            var lat = document.getElementById('searchLat').value;
+            var lng = document.getElementById('searchLng').value;
+            if (keyword.trim() === "") { alert("Vui lòng nhập địa điểm cần tìm!"); return; }
+            let url = "{% url 'map_view' %}?q=" + encodeURIComponent(keyword);
+            if (lat && lng) url += `&lat=${lat}&lng=${lng}`;
+            window.location.href = url;
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') goToMap(); }
+
+        function toggleFavorite(btn) {
+            const roomId = btn.getAttribute('data-id');
+            const isUserLoggedIn = "{{ request.user.is_authenticated }}";
+            if (isUserLoggedIn === "False") {
+                alert("Bạn cần đăng nhập để lưu phòng trọ!");
+                window.location.href = "{% url 'login' %}";
+                return;
+            }
+            fetch(`/api/toggle-favorite/${roomId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let icon = btn.querySelector('i');
+                        if (data.liked) {
+                            icon.classList.remove('bi-heart', 'text-secondary');
+                            icon.classList.add('bi-heart-fill', 'text-danger');
+                        } else {
+                            icon.classList.remove('bi-heart-fill', 'text-danger');
+                            icon.classList.add('bi-heart', 'text-secondary');
+                        }
+                        btn.style.transform = "scale(1.2)";
+                        setTimeout(() => btn.style.transform = "scale(1)", 200);
+                    } else { alert("Lỗi: " + data.error); }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Giải Quyết Khiếu Nại{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h3 class="fw-bold mb-4 text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Gửi Yêu Cầu Khiếu Nại</h3>
+            <div class="alert alert-info">
+                Nếu bạn gặp vấn đề với chủ trọ hoặc phòng không đúng mô tả, hãy liên hệ ngay với chúng tôi.
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success alert-dismissible fade show fw-bold" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i> {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if request.user.is_authenticated %}
+                <form method="POST" class="card p-4 border-0 shadow-sm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tiêu đề khiếu nại <span class="text-danger">*</span></label>
+                        <input type="text" name="tieu_de" class="form-control" placeholder="Vd: Chủ trọ không trả cọc..." required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nội dung chi tiết <span class="text-danger">*</span></label>
+                        <textarea name="noi_dung" class="form-control" rows="5" placeholder="Mô tả sự việc chi tiết để Admin hỗ trợ nhanh nhất..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger fw-bold w-100">
+                        <i class="bi bi-send-fill me-2"></i> Gửi Khiếu Nại
+                    </button>
+                </form>
+            {% else %}
+                <div class="card p-5 border-0 shadow-sm text-center">
+                    <i class="bi bi-shield-lock text-muted mb-3" style="font-size: 3rem;"></i>
+                    <h5 class="fw-bold">Bạn cần đăng nhập để gửi khiếu nại</h5>
+                    <p class="text-muted mb-4">Vui lòng đăng nhập để Ban quản trị biết bạn là ai và hỗ trợ giải quyết vấn đề nhanh chóng.</p>
+                    <div>
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary fw-bold px-4">Đăng nhập ngay</a>
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
