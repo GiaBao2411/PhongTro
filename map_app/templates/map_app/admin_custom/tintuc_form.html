@@ -1,0 +1,203 @@
+{% extends 'map_app/admin_custom/admin_base.html' %}
+{% block title %}{{ action }} Tin Tức{% endblock %}
+
+{% block content %}
+<style>
+    .gallery-upload-box {
+        border: 2px dashed #ddd;
+        border-radius: 12px;
+        padding: 20px;
+        background: #fafafa;
+        transition: 0.3s;
+    }
+    .gallery-upload-box:hover {
+        border-color: #0d6efd;
+        background: #f0f8ff;
+    }
+    .preview-image-managed {
+        width: 120px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid #fff;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        transition: 0.2s;
+    }
+    .preview-image-managed:hover {
+        transform: scale(1.05);
+    }
+    .new-upload-preview {
+        border-color: #198754 !important; 
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-newspaper"></i> {{ action }} Tin Tức</h4>
+        <small class="text-muted">Quản lý Tin tức > {{ action }}</small>
+    </div>
+    <a href="{% url 'custom_admin_tintuc' %}" class="btn btn-outline-secondary fw-bold px-3 rounded-pill">
+        <i class="bi bi-arrow-left"></i> Quay lại danh sách
+    </a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-uppercase text-primary mb-3"><i class="bi bi-pencil-square"></i> Nội dung bài viết</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tiêu đề bài viết</label>
+                        <input type="text" name="tieu_de" class="form-control" value="{{ tin_tuc.tieu_de }}" placeholder="Nhập tiêu đề..." required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nội dung chi tiết</label>
+                        <textarea name="noi_dung" class="form-control" rows="12" placeholder="Nhập nội dung bài viết..." required>{{ tin_tuc.noi_dung }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-success fw-bold px-4 py-3 mt-2 w-100 rounded-3 shadow">
+                <i class="bi bi-save me-1"></i> HOÀN TẤT VÀ LƯU BÀI VIẾT
+            </button>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-uppercase text-danger mb-3"><i class="bi bi-image"></i> Ảnh Đại Diện</h6>
+                    <div class="gallery-upload-box mb-3 text-center">
+                        <i class="bi bi-card-image text-muted mb-2" style="font-size: 2.5rem;"></i>
+                        <input type="file" name="hinh_anh" class="form-control" accept="image/*" {% if not tin_tuc %}required{% endif %}>
+                        <small class="text-muted d-block mt-2">Ảnh hiển thị chính trên danh sách tin tức.</small>
+
+                        {% if tin_tuc and tin_tuc.hinh_anh %}
+                            <div class="position-relative mt-3 p-2 border rounded-3 bg-white shadow-sm mx-auto" id="khu-vuc-anh-dai-dien" style="width: max-content;">
+                                <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow">Ảnh hiện tại</span>
+                                <img src="{{ tin_tuc.hinh_anh.url }}" class="preview-image-managed mt-2" title="Ảnh đại diện" style="width: 200px; height: 120px;">
+                                <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
+                                        style="top: -5px; right: -5px; width: 28px; height: 28px; z-index: 10;"
+                                        onclick="xoaAnhDaiDienTinTuc('{{ tin_tuc.id }}')" title="Xóa ảnh đại diện này">
+                                    <i class="bi bi-trash fw-bold"></i>
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-uppercase text-success mb-3"><i class="bi bi-images"></i> Ảnh Phụ (Nội dung)</h6>
+                    
+                    <div class="gallery-upload-box mb-3 text-center">
+                        <i class="bi bi-cloud-arrow-up-fill text-muted" style="font-size: 2.5rem;"></i>
+                        <input type="file" name="hinh_anh_phu" id="hinh_anh_phu" class="form-control mt-3" accept="image/*" multiple onchange="hienThiThumbnailDetail()">
+                        <small class="text-muted d-block mt-2">Nhấn đè phím <b>Ctrl</b> để tải lên nhiều ảnh minh họa bài viết.</small>
+                    </div>
+
+                    {% if tin_tuc.danh_sach_anh_tin.all %}
+                    <div class="mt-4">
+                        <span class="small fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Ảnh phụ đang có sẵn:</span>
+                        <div class="d-flex flex-wrap gap-3 mt-3">
+                            {% for anh in tin_tuc.danh_sach_anh_tin.all %}
+                                <div class="position-relative d-inline-block" id="anh-phu-{{ anh.id }}">
+                                    <img src="{{ anh.hinh_anh.url }}" class="preview-image-managed" title="Ảnh phụ cũ">
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
+                                            style="top: -8px; right: -8px; width: 24px; height: 24px; z-index: 10;"
+                                            onclick="xoaAnhPhuTinTuc('{{ anh.id }}')" title="Xóa ảnh này">
+                                        <i class="bi bi-x fw-bold"></i>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4" id="vung_chua_preview_detail" style="display: none;">
+                        <span class="small fw-bold text-danger"><i class="bi bi-arrow-up-circle-fill"></i> Ảnh mới sắp tải lên:</span>
+                        <div id="image_preview_detail" class="d-flex flex-wrap gap-3 mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    function hienThiThumbnailDetail() {
+        var previewZone = document.getElementById('vung_chua_preview_detail');
+        var previewArea = document.getElementById('image_preview_detail');
+        var files = document.getElementById('hinh_anh_phu').files;
+        previewArea.innerHTML = ''; 
+        if(files.length > 0) {
+            previewZone.style.display = 'block';
+            [].forEach.call(files, function(file) {
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.className = 'preview-image-managed new-upload-preview'; 
+                    img.title = 'Ảnh mới sắp tải lên';
+                    previewArea.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewZone.style.display = 'none';
+        }
+    }
+    
+    function xoaAnhDaiDienTinTuc(tinTucId) {
+        if (confirm('Bạn có chắc chắn muốn xóa ảnh ĐẠI DIỆN của bài viết này?')) {
+            fetch(`/admin-custom/tintuc/${tinTucId}/xoa-anh-daidien/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let khuVucAnh = document.getElementById('khu-vuc-anh-dai-dien');
+                    khuVucAnh.style.transition = "0.3s";
+                    khuVucAnh.style.transform = "scale(0)";
+                    setTimeout(() => khuVucAnh.remove(), 300);
+                } else {
+                    alert('Lỗi: Không thể xóa ảnh lúc này.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+    
+    function xoaAnhPhuTinTuc(anhId) {
+        if (confirm('Bạn có chắc chắn muốn xóa bức ảnh phụ này khỏi bài viết?')) {
+            fetch(`/admin-custom/tintuc/xoa-anh/${anhId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let imgElement = document.getElementById(`anh-phu-${anhId}`);
+                    imgElement.style.transition = "0.3s";
+                    imgElement.style.transform = "scale(0)";
+                    setTimeout(() => imgElement.remove(), 300);
+                } else {
+                    alert('Lỗi: Không thể xóa ảnh lúc này.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+</script>
+{% endblock %}

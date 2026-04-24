@@ -1,0 +1,14 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Đổi mật khẩu{% endblock %}
+{% block content %}
+<div class="container py-5 d-flex justify-content-center">
+    <div class="card border-0 shadow-sm rounded-4 p-4" style="max-width: 500px; width: 100%;">
+        <h3 class="fw-bold text-center mb-4"><i class="bi bi-key-fill text-primary"></i> Đổi mật khẩu</h3>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill">Lưu Mật Khẩu</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

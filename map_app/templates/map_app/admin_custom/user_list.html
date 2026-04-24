@@ -1,0 +1,86 @@
+{% extends 'map_app/admin_custom/admin_base.html' %}
+{% block title %}Quản lý Người Dùng - SmartRent{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-people-fill"></i> Quản lý Người Dùng</h4>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+            <strong>Thông báo:</strong> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-0">
+        <!-- ĐÃ BỌC CLASS TABLE-RESPONSIVE -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-nowrap">
+                    <tr>
+                        <th class="ps-4">Username</th>
+                        <th>Email address</th>
+                        <th class="text-center">Staff status</th>
+                        <th class="text-center">Trạng thái (Active)</th>
+                        <th class="text-center pe-4">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for nguoi_dung in danh_sach_user %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-primary">{{ nguoi_dung.username }}</td>
+                        
+                        <td class="text-muted">{{ nguoi_dung.email|default:"---" }}</td>
+                        
+                        <td class="text-center">
+                            {% if nguoi_dung.is_staff or nguoi_dung.is_superuser %}
+                                <i class="bi bi-shield-fill-check text-primary fs-5" title="Quản trị viên"></i>
+                            {% else %}
+                                <i class="bi bi-person text-secondary fs-5" title="Người dùng thường"></i>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if nguoi_dung.is_active %}
+                                <span class="badge bg-success text-nowrap">Đang hoạt động</span>
+                            {% else %}
+                                <span class="badge bg-danger text-nowrap">Bị khóa</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center pe-4 text-nowrap">
+                            <a href="{% url 'custom_admin_edit_user' nguoi_dung.id %}" class="btn btn-sm btn-primary me-1" title="Sửa thông tin">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            {% if request.user != nguoi_dung %}
+                                {% if nguoi_dung.is_active %}
+                                    <a href="{% url 'custom_admin_khoa_user' nguoi_dung.id %}" class="btn btn-sm btn-warning" title="Khóa tài khoản" onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản {{ nguoi_dung.username }}?');">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'custom_admin_khoa_user' nguoi_dung.id %}" class="btn btn-sm btn-success" title="Mở khóa tài khoản">
+                                        <i class="bi bi-unlock-fill"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'custom_admin_xoa_user' nguoi_dung.id %}" class="btn btn-sm btn-danger ms-1" title="Xóa người dùng" onclick="return confirm('CẢNH BÁO: Xóa {{ nguoi_dung.username }} không thể hoàn tác. Tiếp tục?');">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-muted border text-nowrap">Là bạn</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-5 text-muted">Chưa có người dùng nào.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> 
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends 'map_app/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ nd.tieu_de_chinh }} - SmartRent{% endblock %}
+
+{% block content %}
+<style>
+    .hero-gt {
+        background: linear-gradient(135deg, #1a237e, #283593) center/cover no-repeat;
+        position: relative; padding: 100px 0; color: #fff; text-align: center;
+    }
+    .hero-gt::before {
+        content: ''; position: absolute; inset: 0;
+        background: rgba(0,0,0,0.55);
+    }
+    .hero-gt > * { position: relative; z-index: 1; }
+
+    .stat-card {
+        background: #fff; border-radius: 16px;
+        padding: 28px 20px; text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+        transition: 0.3s;
+    }
+    .stat-card:hover { transform: translateY(-6px); box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+    .stat-number { font-size: 2.8rem; font-weight: 800; color: #1a237e; line-height: 1; }
+    .stat-label  { color: #6c757d; margin-top: 6px; font-size: 0.9rem; }
+
+    .member-card {
+        border-radius: 16px; overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        transition: 0.3s; background: #fff;
+    }
+    .member-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.13); }
+    .member-avatar {
+        width: 110px; height: 110px; border-radius: 50%;
+        object-fit: cover; border: 4px solid #e8eaf6;
+        margin: 24px auto 12px;
+    }
+    .member-avatar-placeholder {
+        width: 110px; height: 110px; border-radius: 50%;
+        background: #e8eaf6; display: flex; align-items: center;
+        justify-content: center; font-size: 2.5rem; color: #9fa8da;
+        margin: 24px auto 12px;
+    }
+
+    .contact-item {
+        display: flex; align-items: center; gap: 14px;
+        padding: 14px 18px; background: #f8f9fa;
+        border-radius: 12px; margin-bottom: 12px;
+        transition: 0.2s;
+    }
+    .contact-item:hover { background: #e8eaf6; }
+    .contact-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: #1a237e; color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem; flex-shrink: 0;
+    }
+</style>
+
+{# ===== HERO ===== #}
+<div class="hero-gt" {% if nd.hinh_anh_banner %}style="background-image: url('{{ nd.hinh_anh_banner.url }}'); background-size: cover; background-position: center;"{% endif %}>
+    <div class="container">
+        <span class="badge bg-warning text-dark px-3 py-2 mb-3 fw-bold">SmartRent</span>
+        <h1 class="display-4 fw-bold mb-3">{{ nd.tieu_de_chinh }}</h1>
+        <p class="lead mb-0 opacity-75 mx-auto" style="max-width:600px;">{{ nd.mo_ta_ngan }}</p>
+    </div>
+</div>
+
+{# ===== SỨ MỆNH ===== #}
+<div class="container py-5">
+    <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+            <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-3 py-2 mb-3">
+                <i class="bi bi-bullseye me-1"></i> Sứ mệnh
+            </span>
+            <h2 class="fw-bold mb-4">{{ nd.tieu_de_su_menh }}</h2>
+            <p class="text-secondary lh-lg" style="white-space: pre-line;">{{ nd.noi_dung_su_menh }}</p>
+        </div>
+        <div class="col-lg-6">
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="p-4 rounded-4 text-white" style="background:linear-gradient(135deg,#1a237e,#3949ab);">
+                        <i class="bi bi-map-fill fs-2 mb-2 d-block"></i>
+                        <div class="fw-bold">Bản đồ GIS</div>
+                        <small class="opacity-75">Tìm trọ theo thời gian thực</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-4 rounded-4 text-white" style="background:linear-gradient(135deg,#2e7d32,#43a047);">
+                        <i class="bi bi-shield-check fs-2 mb-2 d-block"></i>
+                        <div class="fw-bold">Xác thực thực tế</div>
+                        <small class="opacity-75">Thông tin kiểm duyệt kỹ</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-4 rounded-4 text-white" style="background:linear-gradient(135deg,#e65100,#f57c00);">
+                        <i class="bi bi-lightning-charge-fill fs-2 mb-2 d-block"></i>
+                        <div class="fw-bold">Tìm kiếm nhanh</div>
+                        <small class="opacity-75">Kết quả tức thì</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-4 rounded-4 text-white" style="background:linear-gradient(135deg,#6a1b9a,#8e24aa);">
+                        <i class="bi bi-phone-fill fs-2 mb-2 d-block"></i>
+                        <div class="fw-bold">Hỗ trợ 24/7</div>
+                        <small class="opacity-75">Luôn sẵn sàng giúp bạn</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ===== THỐNG KÊ ===== #}
+<div class="py-5" style="background: linear-gradient(135deg,#1a237e,#283593);">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-white">Con Số Ấn Tượng</h2>
+            <p class="text-white opacity-75">Những gì chúng tôi đã đạt được</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {% if nd.so_phong %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ nd.so_phong|intcomma }}+</div>
+                    <div class="stat-label">🏠 Phòng trọ</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if nd.so_sinh_vien %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ nd.so_sinh_vien|intcomma }}+</div>
+                    <div class="stat-label">👨‍🎓 Sinh viên tin dùng</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if nd.so_quan %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ nd.so_quan }}</div>
+                    <div class="stat-label">🗺️ Quận/Huyện</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if nd.so_nam %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ nd.so_nam }}+</div>
+                    <div class="stat-label">📅 Năm hoạt động</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ===== ĐỘI NGŨ ===== #}
+{% if nd.thanh_vien_1_ten or nd.thanh_vien_2_ten or nd.thanh_vien_3_ten %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Đội Ngũ Của Chúng Tôi</h2>
+        <p class="text-muted">Những người đứng sau SmartRent</p>
+    </div>
+    <div class="row g-4 justify-content-center">
+        {% for i in "123" %}
+        {% with idx=forloop.counter %}
+            {% if idx == 1 and nd.thanh_vien_1_ten %}
+            <div class="col-md-4 col-sm-6">
+                <div class="member-card text-center pb-4">
+                    {% if nd.thanh_vien_1_anh %}
+                        <img src="{{ nd.thanh_vien_1_anh.url }}" class="member-avatar">
+                    {% else %}
+                        <div class="member-avatar-placeholder mx-auto"><i class="bi bi-person-fill"></i></div>
+                    {% endif %}
+                    <h5 class="fw-bold mb-1">{{ nd.thanh_vien_1_ten }}</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ nd.thanh_vien_1_chuc_vu }}</span>
+                </div>
+            </div>
+            {% elif idx == 2 and nd.thanh_vien_2_ten %}
+            <div class="col-md-4 col-sm-6">
+                <div class="member-card text-center pb-4">
+                    {% if nd.thanh_vien_2_anh %}
+                        <img src="{{ nd.thanh_vien_2_anh.url }}" class="member-avatar">
+                    {% else %}
+                        <div class="member-avatar-placeholder mx-auto"><i class="bi bi-person-fill"></i></div>
+                    {% endif %}
+                    <h5 class="fw-bold mb-1">{{ nd.thanh_vien_2_ten }}</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ nd.thanh_vien_2_chuc_vu }}</span>
+                </div>
+            </div>
+            {% elif idx == 3 and nd.thanh_vien_3_ten %}
+            <div class="col-md-4 col-sm-6">
+                <div class="member-card text-center pb-4">
+                    {% if nd.thanh_vien_3_anh %}
+                        <img src="{{ nd.thanh_vien_3_anh.url }}" class="member-avatar">
+                    {% else %}
+                        <div class="member-avatar-placeholder mx-auto"><i class="bi bi-person-fill"></i></div>
+                    {% endif %}
+                    <h5 class="fw-bold mb-1">{{ nd.thanh_vien_3_ten }}</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ nd.thanh_vien_3_chuc_vu }}</span>
+                </div>
+            </div>
+            {% endif %}
+        {% endwith %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ===== LIÊN HỆ ===== #}
+{% if nd.email or nd.so_dien_thoai or nd.dia_chi %}
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Liên Hệ Với Chúng Tôi</h2>
+            <p class="text-muted">Chúng tôi luôn sẵn sàng hỗ trợ bạn</p>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                {% if nd.email %}
+                <div class="contact-item">
+                    <div class="contact-icon"><i class="bi bi-envelope-fill"></i></div>
+                    <div>
+                        <div class="small text-muted">Email</div>
+                        <a href="mailto:{{ nd.email }}" class="fw-bold text-decoration-none text-dark">{{ nd.email }}</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if nd.so_dien_thoai %}
+                <div class="contact-item">
+                    <div class="contact-icon"><i class="bi bi-telephone-fill"></i></div>
+                    <div>
+                        <div class="small text-muted">Điện thoại</div>
+                        <a href="tel:{{ nd.so_dien_thoai }}" class="fw-bold text-decoration-none text-dark">{{ nd.so_dien_thoai }}</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if nd.zalo %}
+                <div class="contact-item">
+                    <div class="contact-icon" style="background:#0068ff;"><i class="bi bi-chat-fill"></i></div>
+                    <div>
+                        <div class="small text-muted">Zalo</div>
+                        <span class="fw-bold">{{ nd.zalo }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if nd.dia_chi %}
+                <div class="contact-item">
+                    <div class="contact-icon"><i class="bi bi-geo-alt-fill"></i></div>
+                    <div>
+                        <div class="small text-muted">Địa chỉ</div>
+                        <span class="fw-bold">{{ nd.dia_chi }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if nd.facebook %}
+                <div class="contact-item">
+                    <div class="contact-icon" style="background:#1877f2;"><i class="bi bi-facebook"></i></div>
+                    <div>
+                        <div class="small text-muted">Facebook</div>
+                        <a href="{{ nd.facebook }}" target="_blank" class="fw-bold text-decoration-none text-dark">Trang Facebook</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
