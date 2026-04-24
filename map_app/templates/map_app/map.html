@@ -3,13 +3,28 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+    /* CSS Cơ bản giữ nguyên[cite: 1] */
     #main-content { flex-grow: 1; display: flex; flex-direction: column; height: calc(100vh - 76px); }
     .map-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-    #sidebar { width: 350px; background: white; display: flex; flex-direction: column; border-right: 1px solid #ddd; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-    #map { flex-grow: 1; height: 100%; width: 100%; }
+    
+    #sidebar { 
+        width: 350px; 
+        background: white; 
+        display: flex; 
+        flex-direction: column; 
+        border-right: 1px solid #ddd; 
+        z-index: 1000; 
+        overflow-y: auto; 
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1); 
+        transition: transform 0.3s ease; /* Hiệu ứng trượt */
+    }
+    
+    #map { flex-grow: 1; height: 100%; width: 100%; z-index: 1; }
+    
     .room-card { cursor: pointer; border-bottom: 1px solid #eee; padding: 10px; transition: 0.2s; background: #fff; position: relative; }
     .room-card:hover { background-color: #f0f8ff; border-color: #0d6efd; }
     .user-pin-marker { background: transparent; border: none; }
+    
     .pulse-animation {
         animation: pulse 2s infinite;
         border-radius: 50%;
@@ -20,14 +35,67 @@
         70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
     }
+
+    /* CSS RESPONSIVE CHO MOBILE */
+    .mobile-toggle-btn { display: none; }
+    
+    @media (max-width: 768px) {
+        #sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 85%; /* Chiếm 85% màn hình đt */
+            max-width: 350px;
+            z-index: 9999; /* Đè lên trên bản đồ */
+            transform: translateX(-100%); /* Giấu sang trái theo mặc định */
+        }
+        #sidebar.show {
+            transform: translateX(0); /* Trượt ra khi có class show */
+            box-shadow: 10px 0 20px rgba(0,0,0,0.3);
+        }
+        
+        /* Lớp phủ đen mờ khi mở menu trên điện thoại */
+        .sidebar-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+        }
+        .sidebar-overlay.show { display: block; }
+
+        /* Nút nổi để mở bộ lọc trên mobile */
+        .mobile-toggle-btn {
+            display: block;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000; /* Nằm trên bản đồ nhưng dưới menu khi mở */
+            border-radius: 50px;
+            padding: 12px 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="map-container">
+    
+    <!-- Lớp phủ mờ (chỉ hiện trên mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <div id="sidebar" class="p-3">
-        <h5 class="text-primary fw-bold mb-3"><i class="bi bi-search"></i> Bộ Lọc Tìm Kiếm</h5>
+        <!-- Header Sidebar có thêm nút Đóng cho Mobile -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-primary fw-bold m-0"><i class="bi bi-search"></i> Bộ Lọc Tìm Kiếm</h5>
+            <button class="btn btn-close d-md-none" onclick="toggleSidebar()"></button>
+        </div>
         
+        <!-- Các nội dung bên trong giữ nguyên[cite: 1] -->
         <div class="mb-3">
             <label class="fw-bold small">1. Vị trí của bạn (Click trên bản đồ):</label>
             <div class="input-group">
@@ -80,13 +148,29 @@
         <hr>
         <div id="results-area"><div class="text-center mt-5 text-muted opacity-50"><i class="bi bi-geo-alt" style="font-size: 3rem;"></i><p class="small mt-2">Kết quả sẽ hiện ở đây...</p></div></div>
     </div>
+    
     <div id="map"></div>
+
+    <!-- Nút Floating Action Button cho Mobile -->
+    <button class="btn btn-primary mobile-toggle-btn" onclick="toggleSidebar()">
+        <i class="bi bi-search me-1"></i> Bộ Lọc Tìm Kiếm
+    </button>
+    
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // JS ẨN/HIỆN SIDEBAR CHO MOBILE
+    function toggleSidebar() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('show');
+        overlay.classList.toggle('show');
+    }
+
+    // Các thiết lập Map giữ nguyên[cite: 1]
     var map = L.map('map').setView([10.7769, 106.7009], 13);
     L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', { 
         attribution: '© Google Maps',
@@ -172,6 +256,12 @@
 
         document.getElementById('results-area').innerHTML = '<div class="text-center mt-3"><div class="spinner-border text-primary"></div><br>Đang tính toán GIS...</div>';
 
+        // Tự động đóng Sidebar trên Mobile sau khi bấm Tìm kiếm để xem kết quả trên bản đồ
+        if(window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
+
         $.ajax({
             url: '/api/tim-kiem/', type: 'GET',
             data: { 'lat': userMarker.getLatLng().lat, 'lng': userMarker.getLatLng().lng, 'mode': mode, 'value': val, 'vehicle': vehicle, 'rush_hour': rushHour },
@@ -179,6 +269,8 @@
                 if (res.error) {
                     alert("❌ Lỗi API: Tọa độ này nằm ngoài vùng hỗ trợ đường đi (VD: giữa biển, rừng sâu). Không thể vẽ bản đồ thời gian di chuyển.");
                     document.getElementById('results-area').innerHTML = "<p class='text-center p-3 text-danger'>Thất bại! Hãy chọn vị trí khác trên đất liền.</p>";
+                    // Mở lại sidebar báo lỗi trên mobile
+                    if(window.innerWidth <= 768) toggleSidebar();
                     return; 
                 }
 
@@ -193,9 +285,13 @@
 
                 if (res.rooms.length === 0) {
                     document.getElementById('results-area').innerHTML = "<p class='text-center p-3 text-muted'>Không tìm thấy phòng nào :(</p>";
+                    if(window.innerWidth <= 768) toggleSidebar();
                 } else {
                     var unit = (mode === 'time') ? 'phút' : 'km';
                     document.getElementById('results-area').innerHTML = `<div class='alert alert-success fw-bold small p-2 mb-2'>🎉 Tìm thấy ${res.rooms.length} phòng (trong ${val} ${unit})</div>`;
+                    
+                    // Thêm class 'd-none d-md-block' vào các card phòng nếu muốn trên mobile ngta tập trung vào marker bản đồ, 
+                    // nhưng ở đây ta cứ render, nếu người dùng mở lại sidebar họ sẽ thấy danh sách dạng text.
                     res.rooms.forEach(room => {
                         var giaHienThi = parseInt(room.gia).toLocaleString('vi-VN') + ' VNĐ';
                         var imgTag = room.img ? `<img src="${room.img}" style="width:100%; height:100px; object-fit:cover; margin-bottom:5px;">` : '';
@@ -209,12 +305,20 @@
             }, error: function() { 
                 alert("❌ Có lỗi xảy ra trong quá trình tính toán hệ thống GIS! Vui lòng thử lại."); 
                 document.getElementById('results-area').innerHTML = ""; 
+                if(window.innerWidth <= 768) toggleSidebar();
             }
         });
     }
 
     function danDuong(endLat, endLng) {
         if (!userMarker) { alert("Vui lòng chọn vị trí của bạn trước!"); return; }
+        
+        // Đóng menu trên Mobile để xem đường đi
+        if(window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
+
         var startLat = userMarker.getLatLng().lat, startLng = userMarker.getLatLng().lng;
         var vehicle = document.getElementById('vehicleSelect').value;
         var rushHour = document.getElementById('rushHourCheck').checked;

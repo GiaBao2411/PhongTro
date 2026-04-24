@@ -20,7 +20,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import NhaTro, PhongTro, HinhAnhNhaTro, TinTuc, HinhAnhTinTuc, DonDatPhong, DanhGia, KhieuNai
+from .models import NhaTro, PhongTro, HinhAnhNhaTro, TinTuc, HinhAnhTinTuc, DonDatPhong, DanhGia, KhieuNai, TrangGioiThieu
 from .forms import DangKyForm, UserUpdateForm
 
 ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
@@ -119,16 +119,29 @@ def room_list(request):
 def room_detail(request, pk):
     nha = get_object_or_404(NhaTro, pk=pk)
     phong_trong = nha.danh_sach_phong.filter(trang_thai='trong')
-    
-    # Alias để tương thích với HTML cũ của bạn
+ 
+    # Alias tên
     nha.ten = nha.ten_nha
-    phong_re = phong_trong.order_by('gia_thue').first()
+ 
+    # ✅ Lấy giá từ TẤT CẢ phòng (không chỉ phòng trống)
+    # → tránh hiện "Giá từ: 0đ" khi tất cả phòng đã được đặt
+    phong_re = nha.danh_sach_phong.order_by('gia_thue').first()
     nha.gia_thue = phong_re.gia_thue if phong_re else 0
-
+ 
+    # Truyền thêm da_danh_gia để template biết user đã đánh giá chưa
+    da_danh_gia = False
+    if request.user.is_authenticated:
+        from .models import DanhGia
+        da_danh_gia = DanhGia.objects.filter(
+            nha_tro=nha, nguoi_danh_gia=request.user
+        ).exists()
+ 
     return render(request, 'map_app/detail.html', {
-        'phong': nha, # HTML đang dùng biến 'phong'
-        'phong_trong': phong_trong # Danh sách các phòng trống để khách chọn
+        'phong': nha,
+        'phong_trong': phong_trong,
+        'da_danh_gia': da_danh_gia,   # ✅ thêm biến này cho template đánh giá
     })
+ 
 
 # ==========================================
 # CHỨC NĂNG ĐẶT PHÒNG VÀ THANH TOÁN
@@ -356,7 +369,9 @@ def news_detail(request, pk):
 def guide(request): return render(request, 'map_app/pages/guide.html')
 def privacy(request): return render(request, 'map_app/pages/privacy.html')
 def faq(request): return render(request, 'map_app/pages/faq.html')
-def gioi_thieu(request): return render(request, 'map_app/pages/gioi_thieu.html')
+def gioi_thieu(request):
+    noi_dung = TrangGioiThieu.load()   # lấy singleton, tự tạo nếu chưa có
+    return render(request, 'map_app/pages/gioi_thieu.html', {'nd': noi_dung})
 
 
 # ==========================================
@@ -649,6 +664,63 @@ def custom_admin_cap_nhat_khieunai(request, pk):
         kn.save()
         messages.success(request, "Đã cập nhật trạng thái khiếu nại!")
     return redirect('custom_admin_khieunai')
+
+# ============================================================
+# THÊM / THAY THẾ vào views.py
+# ============================================================
+# Import thêm ở đầu file (nếu chưa có):
+# from .models import ..., TrangGioiThieu
+
+# ------- TRANG FRONTEND (người dùng xem) -------
+def gioi_thieu(request):
+    noi_dung = TrangGioiThieu.load()   # lấy singleton, tự tạo nếu chưa có
+    return render(request, 'map_app/pages/gioi_thieu.html', {'nd': noi_dung})
+
+
+# ------- TRANG ADMIN (quản trị viên chỉnh sửa) -------
+@admin_only
+def admin_gioi_thieu(request):
+    noi_dung = TrangGioiThieu.load()
+
+    if request.method == 'POST':
+        # --- Hero ---
+        noi_dung.tieu_de_chinh  = request.POST.get('tieu_de_chinh', noi_dung.tieu_de_chinh)
+        noi_dung.mo_ta_ngan     = request.POST.get('mo_ta_ngan',    noi_dung.mo_ta_ngan)
+        if 'hinh_anh_banner' in request.FILES:
+            noi_dung.hinh_anh_banner = request.FILES['hinh_anh_banner']
+
+        # --- Sứ mệnh ---
+        noi_dung.tieu_de_su_menh  = request.POST.get('tieu_de_su_menh',  noi_dung.tieu_de_su_menh)
+        noi_dung.noi_dung_su_menh = request.POST.get('noi_dung_su_menh', noi_dung.noi_dung_su_menh)
+
+        # --- Thống kê ---
+        noi_dung.so_phong     = int(request.POST.get('so_phong',     0) or 0)
+        noi_dung.so_sinh_vien = int(request.POST.get('so_sinh_vien', 0) or 0)
+        noi_dung.so_quan      = int(request.POST.get('so_quan',      0) or 0)
+        noi_dung.so_nam       = int(request.POST.get('so_nam',       0) or 0)
+
+        # --- Đội ngũ ---
+        for i in [1, 2, 3]:
+            setattr(noi_dung, f'thanh_vien_{i}_ten',
+                    request.POST.get(f'thanh_vien_{i}_ten', ''))
+            setattr(noi_dung, f'thanh_vien_{i}_chuc_vu',
+                    request.POST.get(f'thanh_vien_{i}_chuc_vu', ''))
+            if f'thanh_vien_{i}_anh' in request.FILES:
+                setattr(noi_dung, f'thanh_vien_{i}_anh',
+                        request.FILES[f'thanh_vien_{i}_anh'])
+
+        # --- Liên hệ ---
+        noi_dung.email          = request.POST.get('email',          '')
+        noi_dung.so_dien_thoai  = request.POST.get('so_dien_thoai',  '')
+        noi_dung.dia_chi        = request.POST.get('dia_chi',        '')
+        noi_dung.facebook       = request.POST.get('facebook',       '')
+        noi_dung.zalo           = request.POST.get('zalo',           '')
+
+        noi_dung.save()
+        messages.success(request, '✅ Đã cập nhật trang Giới thiệu thành công!')
+        return redirect('admin_gioi_thieu')
+
+    return render(request, 'map_app/admin_custom/gioi_thieu_form.html', {'nd': noi_dung})
 
 signer = TimestampSigner()
 

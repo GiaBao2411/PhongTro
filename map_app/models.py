@@ -97,3 +97,71 @@ class KhieuNai(models.Model):
     noi_dung   = models.TextField()
     trang_thai = models.CharField(max_length=20, choices=TRANG_THAI, default='moi')
     ngay_tao   = models.DateTimeField(auto_now_add=True)
+
+# ============================================================
+# THÊM VÀO CUỐI models.py
+# ============================================================
+
+class TrangGioiThieu(models.Model):
+    """
+    Singleton model – chỉ có 1 bản ghi duy nhất.
+    Admin vào trang quản trị để sửa nội dung, không cần code lại.
+    """
+    # --- Phần HERO (banner đầu trang) ---
+    tieu_de_chinh   = models.CharField(max_length=200, default="Về Chúng Tôi",
+                                        verbose_name="Tiêu đề chính")
+    mo_ta_ngan      = models.TextField(default="Mô tả ngắn hiển thị dưới tiêu đề.",
+                                        verbose_name="Mô tả ngắn (hero)")
+    hinh_anh_banner = models.ImageField(upload_to='gioi_thieu/', blank=True, null=True,
+                                         verbose_name="Ảnh banner")
+
+    # --- Phần SỨ MỆNH ---
+    tieu_de_su_menh = models.CharField(max_length=200, default="Sứ Mệnh Của Chúng Tôi",
+                                        verbose_name="Tiêu đề sứ mệnh")
+    noi_dung_su_menh = models.TextField(default="Nhập nội dung sứ mệnh tại đây.",
+                                         verbose_name="Nội dung sứ mệnh")
+
+    # --- Phần CON SỐ THỐNG KÊ ---
+    so_phong        = models.IntegerField(default=0, verbose_name="Số phòng trọ")
+    so_sinh_vien    = models.IntegerField(default=0, verbose_name="Sinh viên tin dùng")
+    so_quan         = models.IntegerField(default=0, verbose_name="Quận/Huyện phủ sóng")
+    so_nam          = models.IntegerField(default=0, verbose_name="Năm hoạt động")
+
+    # --- Phần ĐỘI NGŨ (tên + mô tả, ảnh tuỳ chọn) ---
+    thanh_vien_1_ten    = models.CharField(max_length=100, blank=True, verbose_name="Thành viên 1 – Tên")
+    thanh_vien_1_chuc_vu = models.CharField(max_length=100, blank=True, verbose_name="Thành viên 1 – Chức vụ")
+    thanh_vien_1_anh    = models.ImageField(upload_to='gioi_thieu/doi_ngu/', blank=True, null=True,
+                                             verbose_name="Thành viên 1 – Ảnh")
+
+    thanh_vien_2_ten    = models.CharField(max_length=100, blank=True, verbose_name="Thành viên 2 – Tên")
+    thanh_vien_2_chuc_vu = models.CharField(max_length=100, blank=True, verbose_name="Thành viên 2 – Chức vụ")
+    thanh_vien_2_anh    = models.ImageField(upload_to='gioi_thieu/doi_ngu/', blank=True, null=True,
+                                             verbose_name="Thành viên 2 – Ảnh")
+
+    thanh_vien_3_ten    = models.CharField(max_length=100, blank=True, verbose_name="Thành viên 3 – Tên")
+    thanh_vien_3_chuc_vu = models.CharField(max_length=100, blank=True, verbose_name="Thành viên 3 – Chức vụ")
+    thanh_vien_3_anh    = models.ImageField(upload_to='gioi_thieu/doi_ngu/', blank=True, null=True,
+                                             verbose_name="Thành viên 3 – Ảnh")
+
+    # --- Phần LIÊN HỆ ---
+    email       = models.EmailField(blank=True, verbose_name="Email liên hệ")
+    so_dien_thoai = models.CharField(max_length=20, blank=True, verbose_name="Số điện thoại")
+    dia_chi     = models.CharField(max_length=255, blank=True, verbose_name="Địa chỉ văn phòng")
+    facebook    = models.URLField(blank=True, verbose_name="Link Facebook")
+    zalo        = models.CharField(max_length=20, blank=True, verbose_name="Số Zalo")
+
+    class Meta:
+        verbose_name = "Trang Giới Thiệu"
+
+    def __str__(self):
+        return "Nội dung Trang Giới Thiệu"
+
+    def save(self, *args, **kwargs):
+        # Singleton: chỉ cho phép 1 bản ghi
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

@@ -66,8 +66,8 @@ urlpatterns = [
     
     path('he-thong/khieu-nai/', views.custom_admin_khieunai, name='custom_admin_khieunai'),
     path('he-thong/khieu-nai/cap-nhat/<int:pk>/', views.custom_admin_cap_nhat_khieunai, name='custom_admin_cap_nhat_khieunai'),
-
-    path('gioi-thieu/', views.gioi_thieu, name='gioi_thieu'),
+    path('he-thong/gioi-thieu/', views.admin_gioi_thieu, name='admin_gioi_thieu'),
+    path('gioi-thieu/',           views.gioi_thieu,       name='gioi_thieu'),
     path('admin-custom/phong/<int:pk>/sua/',  views.custom_admin_sua_phong_con,  name='custom_admin_sua_phong_con'),
     path('admin-custom/phong/<int:pk>/xoa/',  views.custom_admin_xoa_phong_con,  name='custom_admin_xoa_phong_con'),
     path('admin/', admin.site.urls),
