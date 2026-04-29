@@ -17,7 +17,6 @@
 
 <div class="card shadow-sm border-0 rounded-4">
     <div class="card-body p-0">
-        <!-- ĐÃ BỌC CLASS TABLE-RESPONSIVE -->
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light text-nowrap">
@@ -26,7 +25,7 @@
                         <th>Email address</th>
                         <th class="text-center">Staff status</th>
                         <th class="text-center">Trạng thái (Active)</th>
-                        <th class="text-center pe-4">Hành động</th>
+                        <th class="text-center">Quyền</th> <th class="text-center pe-4">Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -52,11 +51,39 @@
                             {% endif %}
                         </td>
 
+                        <td class="text-center">
+                            {% if nguoi_dung.is_superuser %}
+                                <span class="badge" style="background:#7F77DD;">Admin</span>
+                            {% elif nguoi_dung.ho_so_chu_tro %}
+                                <span class="badge bg-warning text-dark">Chủ trọ</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">User</span>
+                            {% endif %}
+                        </td>
+
                         <td class="text-center pe-4 text-nowrap">
                             <a href="{% url 'custom_admin_edit_user' nguoi_dung.id %}" class="btn btn-sm btn-primary me-1" title="Sửa thông tin">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
+
                             {% if request.user != nguoi_dung %}
+                                {% if not nguoi_dung.is_superuser %}
+                                    {% if nguoi_dung.ho_so_chu_tro %}
+                                        <a href="{% url 'admin_thu_hoi_quyen_chu_tro' nguoi_dung.pk %}" 
+                                           class="btn btn-sm btn-outline-warning me-1" 
+                                           onclick="return confirm('Thu hồi quyền Chủ trọ của {{ nguoi_dung.username }}?')"
+                                           title="Thu hồi quyền Chủ trọ">
+                                            <i class="bi bi-shield-x"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'admin_cap_quyen_chu_tro' nguoi_dung.pk %}" 
+                                           class="btn btn-sm btn-outline-success me-1" 
+                                           title="Cấp quyền Chủ trọ">
+                                            <i class="bi bi-shield-plus"></i>
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+
                                 {% if nguoi_dung.is_active %}
                                     <a href="{% url 'custom_admin_khoa_user' nguoi_dung.id %}" class="btn btn-sm btn-warning" title="Khóa tài khoản" onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản {{ nguoi_dung.username }}?');">
                                         <i class="bi bi-lock-fill"></i>
@@ -76,7 +103,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="text-center py-5 text-muted">Chưa có người dùng nào.</td></tr>
+                    <tr><td colspan="6" class="text-center py-5 text-muted">Chưa có người dùng nào.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

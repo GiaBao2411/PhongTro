@@ -33,7 +33,7 @@
             color: rgba(255,255,255,0.85) !important; 
             font-weight: 500; 
             margin: 0 10px; 
-            transition: 0.3s; 
+            transition: 0.3s;
             position: relative; 
         }
         .nav-link:hover { 
@@ -130,7 +130,14 @@
                                     <li><a class="dropdown-item py-2 fw-bold" href="/admin/map_app/phongtro/add/" target="_blank"><i class="bi bi-plus-lg me-2 text-success"></i> Đăng phòng nhanh</a></li>
                                     <li><a class="dropdown-item py-2" href="{% url 'admin_dashboard' %}"><i class="bi bi-speedometer2 me-2"></i> Vào trang Admin</a></li>
                                 {% endif %}
-                                
+                                {% if request.user.ho_so_chu_tro %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item fw-bold text-warning" href="{% url 'chu_tro_dashboard' %}">
+                                        <i class="bi bi-building-fill-up me-2 text-warning"></i> Quản lý phòng trọ
+                                    </a>
+                                </li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider my-2"></li>
                                 <li>
                                     <form action="{% url 'logout' %}" method="post" class="d-inline">

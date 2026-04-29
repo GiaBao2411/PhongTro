@@ -1,22 +1,14 @@
-{% extends 'map_app/admin_custom/admin_base.html' %}
-{% load humanize %} {% block title %}Quản lý Khu Trọ - SmartRent{% endblock %}
+{% extends 'map_app/chu_tro/chu_tro_base.html' %}
+{% load humanize %} {% block title %}Quản lý Phòng Trọ - SmartRent{% endblock %}
+{% block breadcrumb %}Khu trọ của tôi{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-house-door-fill"></i> Quản lý Khu Trọ</h4>
-    <a href="{% url 'custom_admin_them_phongtro' %}" class="btn btn-success fw-bold px-4 rounded-pill shadow-sm text-nowrap">
+    <a href="{% url 'chu_tro_them_phongtro' %}" class="btn btn-success fw-bold px-4 rounded-pill shadow-sm text-nowrap">
         <i class="bi bi-plus-lg me-1"></i> Thêm Khu Trọ Mới
     </a>
 </div>
-
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-            <strong>Thông báo:</strong> {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
-{% endif %}
 
 <div class="card shadow-sm border-0 rounded-4">
     <div class="card-body p-0">
@@ -26,9 +18,7 @@
                     <tr>
                         <th class="ps-4">Ảnh khu trọ</th>
                         <th>Tên khu trọ</th>
-                        <th class="text-center">Số phòng con</th>
-                        <th>Giá thuê (tham khảo)</th>
-                        <th>Địa chỉ</th>
+                        <th class="text-center">Số phòng con</th> <th>Giá thuê (tham khảo)</th> <th>Địa chỉ</th>
                         <th>Ngày đăng</th>
                         <th class="text-center pe-4">Hành động</th>
                     </tr>
@@ -43,6 +33,7 @@
                                 <span class="badge bg-secondary">Chưa có ảnh</span>
                             {% endif %}
                         </td>
+                        
                         <td class="fw-bold text-primary text-nowrap">{{ phong.ten }}</td>
                         
                         <td class="text-center">
@@ -50,7 +41,7 @@
                                 <i class="bi bi-door-open-fill me-1"></i> {{ phong.danh_sach_phong.count }} phòng
                             </span>
                         </td>
-
+                        
                         <td class="text-danger fw-bold text-nowrap">
                             {% if phong.gia_thap_nhat > 0 %}
                                 Từ {{ phong.gia_thap_nhat|floatformat:0|intcomma }} đ
@@ -58,16 +49,16 @@
                                 <span class="text-muted small">Chưa có phòng/giá</span>
                             {% endif %}
                         </td>
-
+                        
                         <td class="text-muted small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ phong.dia_chi }}">
                             {{ phong.dia_chi }}
                         </td>
                         <td class="text-muted small text-nowrap">{{ phong.created_at|date:"d/m/Y" }}</td>
                         <td class="text-center pe-4 text-nowrap">
-                            <a href="{% url 'custom_admin_sua_phongtro' phong.id %}" class="btn btn-sm btn-primary me-1" title="Sửa">
+                            <a href="{% url 'chu_tro_sua_phongtro' phong.id %}" class="btn btn-sm btn-primary me-1" title="Sửa">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
-                            <a href="{% url 'custom_admin_xoa_phongtro' phong.id %}" class="btn btn-sm btn-danger" title="Xóa" onclick="return confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA khu trọ {{ phong.ten }} này không?');">
+                            <a href="{% url 'chu_tro_xoa_phongtro' phong.id %}" class="btn btn-sm btn-danger" title="Xóa" onclick="return confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA phòng {{ phong.ten }} này không?');">
                                 <i class="bi bi-trash-fill"></i>
                             </a>
                         </td>
@@ -80,7 +71,7 @@
         </div>
     </div>
     <div class="card-footer bg-white text-muted small ps-4">
-        Tổng cộng: {{ danh_sach_phong.paginator.count }} khu trọ
+        Tổng cộng: {{ danh_sach_phong|length }} khu trọ
     </div>
 </div>
 

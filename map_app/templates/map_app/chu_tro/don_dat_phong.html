@@ -1,0 +1,151 @@
+{% extends 'map_app/chu_tro/chu_tro_base.html' %}
+{% load humanize %}
+{% block title %}Quản Lý Đơn Đặt Phòng{% endblock %}
+{% block breadcrumb %}Đơn đặt phòng{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold text-dark">
+            <i class="bi bi-card-checklist me-2"></i>Quản Lý Đơn Đặt Phòng
+        </h4>
+        <small class="text-muted">Tổng cộng {{ danh_sach_don.count }} đơn</small>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-3" style="width:110px;">Mã Đơn</th>
+                        <th style="width:170px;">Người Thuê</th>
+                        <th>Phòng Trọ</th>
+                        <th style="width:110px;">Ngày Vào</th>
+                        <th style="width:130px;">Tiền Cọc</th>
+                        <th style="width:190px;">Trạng Thái</th>
+                        <th class="text-center pe-4" style="width:80px;">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for don in danh_sach_don %}
+                    <tr>
+                        {# Mã đơn #}
+                        <td class="ps-4">
+                            <span class="fw-bold text-primary">#{{ don.id }}</span>
+                            <div class="text-muted" style="font-size:0.72rem;">
+                                {{ don.ngay_tao|date:"H:i - d/m/Y" }}
+                            </div>
+                        </td>
+
+                        {# Người thuê #}
+                        <td>
+                            <div class="fw-bold">{{ don.nguoi_thue.username }}</div>
+                            <div class="text-muted small text-truncate" style="max-width:150px;">
+                                {{ don.nguoi_thue.email }}
+                            </div>
+                        </td>
+
+                        {# Phòng trọ chi tiết #}
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                {% if don.phong.hinh_anh %}
+                                    <img src="{{ don.phong.hinh_anh.url }}"
+                                         style="width:60px;height:48px;object-fit:cover;border-radius:8px;border:2px solid #dee2e6;flex-shrink:0;">
+                                {% elif don.phong.nha_tro.hinh_anh %}
+                                    <img src="{{ don.phong.nha_tro.hinh_anh.url }}"
+                                         style="width:60px;height:48px;object-fit:cover;border-radius:8px;border:2px solid #dee2e6;flex-shrink:0;">
+                                {% else %}
+                                    <div style="width:60px;height:48px;border-radius:8px;background:#e9ecef;
+                                                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="bi bi-house text-muted fs-5"></i>
+                                    </div>
+                                {% endif %}
+
+                                <div>
+                                    <div class="fw-bold text-dark small">
+                                        <i class="bi bi-door-open-fill text-primary me-1"></i>
+                                        {{ don.phong.ten_phong }}
+                                    </div>
+                                    <div class="text-primary small fw-semibold">
+                                        <i class="bi bi-building me-1"></i>
+                                        {{ don.phong.nha_tro.ten_nha }}
+                                    </div>
+                                    <div class="text-muted" style="font-size:0.72rem;max-width:200px;"
+                                         title="{{ don.phong.nha_tro.dia_chi }}">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        {{ don.phong.nha_tro.dia_chi|truncatechars:38 }}
+                                    </div>
+                                    <div class="d-flex gap-1 mt-1 flex-wrap">
+                                        <span class="badge bg-light text-dark border" style="font-size:0.68rem;">
+                                            <i class="bi bi-rulers me-1"></i>{{ don.phong.dien_tich }} m²
+                                        </span>
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"
+                                              style="font-size:0.68rem;">
+                                            {{ don.phong.gia_thue|floatformat:0|intcomma }} đ/th
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        {# Ngày vào #}
+                        <td class="text-nowrap small">
+                            <i class="bi bi-calendar3 text-muted me-1"></i>
+                            {{ don.ngay_don_vao|date:"d/m/Y" }}
+                        </td>
+
+                        {# Tiền cọc #}
+                        <td class="fw-bold text-danger text-nowrap small">
+                            {{ don.tien_coc|floatformat:0|intcomma }} đ
+                        </td>
+
+                        {# Trạng thái + duyệt #}
+                        <td>
+                            <form method="POST" action="{% url 'chu_tro_duyet_don' don.id %}">
+                                {% csrf_token %}
+                                <div class="input-group input-group-sm">
+                                    <select name="trang_thai" class="form-select form-select-sm border-0 rounded-start-3 shadow-sm fw-bold
+                                        {% if don.trang_thai == 'cho_xac_nhan' %}bg-warning text-dark
+                                        {% elif don.trang_thai == 'da_dat_coc' %}bg-success text-white
+                                        {% else %}bg-secondary text-white{% endif %}">
+                                        <option value="cho_xac_nhan" {% if don.trang_thai == 'cho_xac_nhan' %}selected{% endif %}>⏳ Chờ xác nhận</option>
+                                        <option value="da_dat_coc"   {% if don.trang_thai == 'da_dat_coc'   %}selected{% endif %}>✅ Đã đặt cọc</option>
+                                        <option value="huy"          {% if don.trang_thai == 'huy'          %}selected{% endif %}>❌ Đã hủy</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-dark rounded-end-3 px-2" title="Lưu">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </td>
+
+                        {# Nút xóa #}
+                        <td class="text-center pe-4">
+                            <form method="POST" action="{% url 'chu_tro_xoa_don' don.id %}"
+                                  onsubmit="return confirm('Xóa đơn #{{ don.id }}? Hành động không thể hoàn tác!')">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="btn btn-outline-danger btn-sm rounded-circle"
+                                        style="width:32px;height:32px;padding:0;"
+                                        title="Xóa đơn">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                            Chưa có đơn đặt phòng nào.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

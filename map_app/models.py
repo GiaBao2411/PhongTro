@@ -12,7 +12,10 @@ class NhaTro(models.Model):
     mo_ta    = models.TextField(null=True, blank=True, verbose_name="Mô tả chung")
     created_at = models.DateTimeField(auto_now_add=True)
     favorites  = models.ManyToManyField(User, related_name='nha_tro_yeu_thich', blank=True)
-
+    owner = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='nha_tro_so_huu', verbose_name="Chủ sở hữu"
+    )
     def __str__(self):
         return self.ten_nha
 
@@ -165,3 +168,22 @@ class TrangGioiThieu(models.Model):
     def load(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+    
+class HoSoChuTro(models.Model):
+    """
+    Profile mở rộng cho tài khoản được Admin cấp quyền Chủ trọ.
+    Mỗi User chỉ có 1 HoSoChuTro (OneToOne).
+    Chủ trọ chỉ thấy và sửa được những NhaTro họ sở hữu.
+    """
+    user        = models.OneToOneField(User, on_delete=models.CASCADE,
+                                        related_name='ho_so_chu_tro')
+    so_dien_thoai = models.CharField(max_length=20, blank=True)
+    dia_chi       = models.CharField(max_length=255, blank=True)
+    ngay_cap      = models.DateTimeField(auto_now_add=True, verbose_name="Ngày cấp quyền")
+    ghi_chu       = models.TextField(blank=True, verbose_name="Ghi chú của Admin")
+ 
+    class Meta:
+        verbose_name = "Hồ sơ Chủ trọ"
+ 
+    def __str__(self):
+        return f"Chủ trọ: {self.user.username}"

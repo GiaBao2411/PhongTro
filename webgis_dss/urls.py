@@ -92,6 +92,20 @@ urlpatterns = [
         path('dat-lai-mat-khau/thanh-cong/', auth_views.PasswordResetCompleteView.as_view(
             template_name='map_app/auth/dat_lai_mat_khau_thanh_cong.html'
         ), name='password_reset_complete'),
+    path('he-thong/nguoi-dung/cap-quyen-chu-tro/<int:pk>/',
+     views.admin_cap_quyen_chu_tro, name='admin_cap_quyen_chu_tro'),
+    path('he-thong/nguoi-dung/thu-hoi-chu-tro/<int:pk>/',
+        views.admin_thu_hoi_quyen_chu_tro, name='admin_thu_hoi_quyen_chu_tro'),
+    
+    # --- Chủ trọ: khu vực riêng ---
+    path('chu-tro/',                      views.chu_tro_dashboard,              name='chu_tro_dashboard'),
+    path('chu-tro/phong-tro/',            views.chu_tro_danh_sach_phongtro,     name='chu_tro_danh_sach_phongtro'),
+    path('chu-tro/phong-tro/them/',       views.chu_tro_them_phongtro,          name='chu_tro_them_phongtro'),
+    path('chu-tro/phong-tro/sua/<int:pk>/', views.chu_tro_sua_phongtro,         name='chu_tro_sua_phongtro'),
+    path('chu-tro/phong-tro/xoa/<int:pk>/', views.chu_tro_xoa_phongtro,        name='chu_tro_xoa_phongtro'),
+    path('chu-tro/don-dat-phong/',        views.chu_tro_don_dat_phong,          name='chu_tro_don_dat_phong'),
+    path('chu-tro/don-dat-phong/duyet/<int:pk>/', views.chu_tro_duyet_don,     name='chu_tro_duyet_don'),
+    path('chu-tro/don-dat-phong/xoa/<int:pk>/', views.chu_tro_xoa_don, name='chu_tro_xoa_don'),
     ]
 
 if settings.DEBUG:

@@ -1,0 +1,73 @@
+{% extends 'map_app/chu_tro/chu_tro_base.html' %}
+{% block title %}Dashboard Chủ Trọ{% endblock %}
+{% block breadcrumb %}Tổng quan{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="bi bi-speedometer2 me-2" style="color:#2e7d32;"></i>
+        Xin chào, {{ request.user.username }} 👋
+    </h4>
+    <small class="text-muted">Quản lý khu trọ của bạn tại đây</small>
+</div>
+
+{# Thống kê nhanh #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+            <div class="fs-2 fw-bold text-primary">{{ tong_nha }}</div>
+            <div class="text-muted small">Khu trọ</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+            <div class="fs-2 fw-bold text-dark">{{ tong_phong }}</div>
+            <div class="text-muted small">Tổng phòng</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+            <div class="fs-2 fw-bold text-success">{{ phong_trong }}</div>
+            <div class="text-muted small">Phòng trống</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+            <div class="fs-2 fw-bold text-warning">{{ don_cho }}</div>
+            <div class="text-muted small">Đơn chờ duyệt</div>
+        </div>
+    </div>
+</div>
+
+{# Quick actions #}
+<div class="row g-3">
+    <div class="col-md-6">
+        <a href="{% url 'chu_tro_danh_sach_phongtro' %}"
+           class="card border-0 shadow-sm rounded-4 p-4 text-decoration-none d-flex flex-row align-items-center gap-3 text-dark">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:52px;height:52px;background:#e8f5e9;flex-shrink:0;">
+                <i class="bi bi-house-door-fill fs-4" style="color:#2e7d32;"></i>
+            </div>
+            <div>
+                <div class="fw-bold">Quản lý Khu trọ</div>
+                <div class="text-muted small">Thêm, sửa, xóa khu trọ và phòng con</div>
+            </div>
+            <i class="bi bi-arrow-right ms-auto text-muted"></i>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a href="{% url 'chu_tro_don_dat_phong' %}"
+           class="card border-0 shadow-sm rounded-4 p-4 text-decoration-none d-flex flex-row align-items-center gap-3 text-dark">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:52px;height:52px;background:#fff8e1;flex-shrink:0;">
+                <i class="bi bi-card-checklist text-warning fs-4"></i>
+            </div>
+            <div>
+                <div class="fw-bold">Đơn đặt phòng</div>
+                <div class="text-muted small">Xem và duyệt đơn đặt phòng</div>
+            </div>
+            <i class="bi bi-arrow-right ms-auto text-muted"></i>
+        </a>
+    </div>
+</div>
+{% endblock %}

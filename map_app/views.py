@@ -15,20 +15,13 @@ from functools import wraps
 import requests
 import json
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.urls import reverse
-from django.contrib.auth.models import User
-from .models import NhaTro, PhongTro, HinhAnhNhaTro, TinTuc, HinhAnhTinTuc, DonDatPhong, DanhGia, KhieuNai, TrangGioiThieu
+from .models import NhaTro, PhongTro, HinhAnhNhaTro, TinTuc, HinhAnhTinTuc, DonDatPhong, DanhGia, KhieuNai, TrangGioiThieu, HoSoChuTro
 from .forms import DangKyForm, UserUpdateForm
 
 ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjM0MmY1ZWQ3NjI0MzQ0NWM5NjVlZjA0NGQ2ZjE1NTIzIiwiaCI6Im11cm11cjY0In0=' 
 signer = TimestampSigner()
 
-# ==========================================
-# THẺ BẢO VỆ CHUYÊN DỤNG CHO ADMIN
-# ==========================================
 def admin_only(view_func):
     @wraps(view_func)
     def wrapper_func(request, *args, **kwargs):
@@ -39,14 +32,23 @@ def admin_only(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper_func
 
+def chu_tro_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        if hasattr(request.user, 'ho_so_chu_tro'):
+            return view_func(request, *args, **kwargs)
+        raise PermissionDenied("Bạn không có quyền truy cập khu vực này!")
+    return wrapper
 
-# ==========================================
-# CÁC TRANG DÀNH CHO NGƯỜI DÙNG BÌNH THƯỜNG
-# ==========================================
+def is_chu_tro(user):
+    return user.is_superuser or hasattr(user, 'ho_so_chu_tro')
+
 def home(request):
     danh_sach_nha = NhaTro.objects.all().order_by('-created_at')[:3]
-    
-    # Logic đếm phòng trống cho trang chủ
     for nha in danh_sach_nha:
         nha.so_phong_trong = nha.danh_sach_phong.filter(trang_thai='trong').count()
         nha.tong_so_phong = nha.danh_sach_phong.count()
@@ -62,46 +64,33 @@ def home(request):
 def map_view(request):
     nha_tros = NhaTro.objects.all()
     rooms = []
-    
     for nha in nha_tros:
-        # Chỉ lấy những khu trọ còn phòng trống
         if nha.danh_sach_phong.filter(trang_thai='trong').exists():
-            # TẠO ALIAS (BÍ DANH) ĐỂ ĐÁNH LỪA HTML CŨ
             nha.ten = nha.ten_nha 
-            
-            # Lấy giá của phòng rẻ nhất làm giá đại diện hiện lên bản đồ
             phong_re = nha.danh_sach_phong.order_by('gia_thue').first()
             nha.gia_thue = phong_re.gia_thue if phong_re else 0
-            
             rooms.append(nha)
-            
     return render(request, 'map_app/map.html', {'rooms': rooms})
 
 def room_list(request):
     search_query = request.GET.get('search', '')
     price_filter = request.GET.get('price', '')
-    
     all_nha = NhaTro.objects.all().order_by('-id')
     
     if search_query:
-        all_nha = all_nha.filter(
-            Q(ten_nha__icontains=search_query) | Q(dia_chi__icontains=search_query)
-        )
+        all_nha = all_nha.filter(Q(ten_nha__icontains=search_query) | Q(dia_chi__icontains=search_query))
         
     nha_hien_thi = []
     for nha in all_nha:
         nha.so_phong_trong = nha.danh_sach_phong.filter(trang_thai='trong').count()
         nha.tong_so_phong = nha.danh_sach_phong.count()
-        
         phong_re = nha.danh_sach_phong.order_by('gia_thue').first()
         nha.gia_thap_nhat = phong_re.gia_thue if phong_re else 0
         
-        # Áp dụng bộ lọc giá (dựa trên giá rẻ nhất của nhà đó)
         if price_filter == 'under_2m' and nha.gia_thap_nhat >= 2000000: continue
         if price_filter == '2m_5m' and (nha.gia_thap_nhat < 2000000 or nha.gia_thap_nhat > 5000000): continue
         if price_filter == 'above_5m' and nha.gia_thap_nhat <= 5000000: continue
         
-        # Để html cũ không bị lỗi, ta tạo các alias
         nha.ten = nha.ten_nha 
         nha.gia_thue = nha.gia_thap_nhat
         nha_hien_thi.append(nha)
@@ -119,38 +108,23 @@ def room_list(request):
 def room_detail(request, pk):
     nha = get_object_or_404(NhaTro, pk=pk)
     phong_trong = nha.danh_sach_phong.filter(trang_thai='trong')
- 
-    # Alias tên
     nha.ten = nha.ten_nha
- 
-    # ✅ Lấy giá từ TẤT CẢ phòng (không chỉ phòng trống)
-    # → tránh hiện "Giá từ: 0đ" khi tất cả phòng đã được đặt
     phong_re = nha.danh_sach_phong.order_by('gia_thue').first()
     nha.gia_thue = phong_re.gia_thue if phong_re else 0
  
-    # Truyền thêm da_danh_gia để template biết user đã đánh giá chưa
     da_danh_gia = False
     if request.user.is_authenticated:
-        from .models import DanhGia
-        da_danh_gia = DanhGia.objects.filter(
-            nha_tro=nha, nguoi_danh_gia=request.user
-        ).exists()
+        da_danh_gia = DanhGia.objects.filter(nha_tro=nha, nguoi_danh_gia=request.user).exists()
  
     return render(request, 'map_app/detail.html', {
         'phong': nha,
         'phong_trong': phong_trong,
-        'da_danh_gia': da_danh_gia,   # ✅ thêm biến này cho template đánh giá
+        'da_danh_gia': da_danh_gia,
     })
- 
 
-# ==========================================
-# CHỨC NĂNG ĐẶT PHÒNG VÀ THANH TOÁN
-# ==========================================
 @login_required
 def xac_nhan_dat_phong(request, room_id):
-    # Lấy ĐÍCH DANH phòng mà khách chọn
     phong_duoc_chon = get_object_or_404(PhongTro, id=room_id)
-    
     if phong_duoc_chon.trang_thai != 'trong':
         messages.warning(request, "⚠️ Chậm chân rồi! Phòng này vừa có người khác đặt giữ chỗ.")
         return redirect('room_detail', pk=phong_duoc_chon.nha_tro.id)
@@ -158,21 +132,16 @@ def xac_nhan_dat_phong(request, room_id):
     if request.method == 'POST':
         ngay_don = request.POST.get('ngay_don_vao')
         loi_nhan = request.POST.get('loi_nhan')  
-        
-        # 1. Tạo đơn đặt phòng
         don_moi = DonDatPhong.objects.create(
             nguoi_thue=request.user,
             phong=phong_duoc_chon,
             ngay_don_vao=ngay_don,
-            tien_coc=phong_duoc_chon.gia_thue, # Cọc 1 tháng
+            tien_coc=phong_duoc_chon.gia_thue,
             ghi_chu=loi_nhan,
             trang_thai='cho_xac_nhan'
         )
-        
-        # 2. KHÓA PHÒNG LẠI (Trừ đi 1 phòng trống)
         phong_duoc_chon.trang_thai = 'da_dat'
         phong_duoc_chon.save()
-        
         return redirect('thanh_toan', don_id=don_moi.id) 
         
     return render(request, 'map_app/booking.html', {'phong': phong_duoc_chon})
@@ -189,9 +158,6 @@ def thanh_toan(request, don_id):
     qr_url = f"https://img.vietqr.io/image/Sacombank-060308333003-compact.jpg?amount={int(don.tien_coc)}&addInfo={noi_dung_ck}&accountName=CHU_TRO"
     return render(request, 'map_app/payment.html', {'don': don, 'qr_url': qr_url})
 
-# ==========================================
-# CÁC API & TÍNH NĂNG PHỤ
-# ==========================================
 def search_api(request):
     try:
         lat = float(request.GET.get('lat'))
@@ -201,7 +167,6 @@ def search_api(request):
         vehicle = request.GET.get('vehicle', 'moto') 
         is_rush_hour = request.GET.get('rush_hour') == 'true'
 
-        # ... (Phần tính toán vận tốc và range_val giữ nguyên như cũ) ...
         speed_map = {'moto': 35, 'car': 30, 'walk': 5}
         van_toc = speed_map.get(vehicle, 30)
         if is_rush_hour and vehicle != 'walk': van_toc *= 0.6 
@@ -220,23 +185,17 @@ def search_api(request):
         data = response.json()
         if 'features' in data:
             poly = GEOSGeometry(json.dumps(data['features'][0]['geometry']))
-            
-            # --- ĐOẠN THAY ĐỔI QUAN TRỌNG NHẤT Ở ĐÂY ---
-            # Tìm trong bảng NhaTro thay vì PhongTro
             nha_tros = NhaTro.objects.filter(location__within=poly)
-            
             results = []
             for nha in nha_tros:
-                # Chỉ hiện lên bản đồ nếu nhà đó còn ít nhất 1 phòng trống
                 phong_trong = nha.danh_sach_phong.filter(trang_thai='trong')
                 if phong_trong.exists():
                     img_url = nha.hinh_anh.url if nha.hinh_anh else ""
                     phong_re_nhat = phong_trong.order_by('gia_thue').first()
-                    
                     results.append({
                         'id': nha.id, 
-                        'ten': nha.ten_nha, # Trả về tên nhà
-                        'gia': phong_re_nhat.gia_thue, # Trả về giá thấp nhất để hiện trên marker
+                        'ten': nha.ten_nha,
+                        'gia': phong_re_nhat.gia_thue,
                         'dia_chi': nha.dia_chi, 
                         'lat': nha.location.y, 
                         'lng': nha.location.x, 
@@ -301,9 +260,52 @@ def gui_danh_gia(request, room_id):
             messages.success(request, "Cảm ơn bạn đã gửi đánh giá!")
     return redirect('room_detail', pk=room_id)
 
-# ==========================================
-# PROFILE & OTHER PAGES
-# ==========================================
+def yeu_cau_dang_ky(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        if email:
+            if User.objects.filter(email=email).exists():
+                messages.error(request, "Email này đã được sử dụng. Vui lòng đăng nhập!")
+                return redirect('login')
+
+            token = signer.sign(email)
+            link = request.build_absolute_uri(reverse('xac_nhan_dang_ky', args=[token]))
+            subject = 'Link xác nhận đăng ký tài khoản SmartRent 🏠'
+            html_message = render_to_string('map_app/emails/register_link_email.html', {'link': link})
+            plain_message = strip_tags(html_message)
+            
+            try:
+                send_mail(subject, plain_message, 'SmartRent <noreply@smartrent.vn>', [email], html_message=html_message)
+                messages.success(request, "Tuyệt vời! Vui lòng kiểm tra email (Mailtrap) để lấy link đăng ký.")
+                return redirect('login')
+            except Exception as e:
+                messages.error(request, f"Lỗi gửi mail: {e}")
+                
+    return render(request, 'map_app/yeu_cau_dang_ky.html')
+
+def xac_nhan_dang_ky(request, token):
+    try:
+        email = signer.unsign(token, max_age=900)
+    except SignatureExpired:
+        messages.error(request, "Link đăng ký đã hết hạn (quá 15 phút). Vui lòng gửi lại yêu cầu.")
+        return redirect('register')
+    except BadSignature:
+        messages.error(request, "Link đăng ký không hợp lệ hoặc đã bị chỉnh sửa.")
+        return redirect('register')
+
+    if request.method == 'POST':
+        form = DangKyForm(request.POST) 
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email = email
+            user.save()
+            messages.success(request, "Đăng ký thành công! Chào mừng bạn đến với SmartRent.")
+            return redirect('login')
+    else:
+        form = DangKyForm(initial={'email': email})
+
+    return render(request, 'map_app/register.html', {'form': form, 'email_verified': email})
+
 def register(request):
     if request.method == "POST":
         form = DangKyForm(request.POST)
@@ -370,13 +372,9 @@ def guide(request): return render(request, 'map_app/pages/guide.html')
 def privacy(request): return render(request, 'map_app/pages/privacy.html')
 def faq(request): return render(request, 'map_app/pages/faq.html')
 def gioi_thieu(request):
-    noi_dung = TrangGioiThieu.load()   # lấy singleton, tự tạo nếu chưa có
+    noi_dung = TrangGioiThieu.load()
     return render(request, 'map_app/pages/gioi_thieu.html', {'nd': noi_dung})
 
-
-# ==========================================
-# CÁC TRANG DÀNH RIÊNG CHO QUẢN TRỊ VIÊN (ADMIN CUSTOM)
-# ==========================================
 @admin_only
 def admin_dashboard(request):
     tong_nha = NhaTro.objects.count()
@@ -398,7 +396,6 @@ def admin_dashboard(request):
     }
     return render(request, 'map_app/admin_custom/admin_dashboard.html', context)
 
-# ... (Giữ nguyên các hàm quản lý User)
 @admin_only
 def custom_admin_users(request):
     return render(request, 'map_app/admin_custom/user_list.html', {'danh_sach_user': User.objects.all().order_by('-date_joined')})
@@ -434,18 +431,46 @@ def custom_admin_edit_user(request, pk):
         return redirect('custom_admin_users')
     return render(request, 'map_app/admin_custom/user_edit.html', {'user_obj': user_obj})
 
-# Quản lý Nhà Trọ (Sử dụng alias phong để không phá vỡ HTML cũ)
+@admin_only
+def admin_cap_quyen_chu_tro(request, pk):
+    user_obj = get_object_or_404(User, pk=pk)
+    if request.method == 'POST':
+        so_dt  = request.POST.get('so_dien_thoai', '')
+        dc     = request.POST.get('dia_chi', '')
+        ghi_chu = request.POST.get('ghi_chu', '')
+ 
+        HoSoChuTro.objects.update_or_create(
+            user=user_obj,
+            defaults={'so_dien_thoai': so_dt, 'dia_chi': dc, 'ghi_chu': ghi_chu}
+        )
+        messages.success(request, f'✅ Đã cấp quyền Chủ trọ cho {user_obj.username}!')
+        return redirect('custom_admin_users')
+ 
+    ho_so = getattr(user_obj, 'ho_so_chu_tro', None)
+    return render(request, 'map_app/admin_custom/cap_quyen_chu_tro.html', {
+        'user_obj': user_obj,
+        'ho_so': ho_so,
+    })
+ 
+@admin_only
+def admin_thu_hoi_quyen_chu_tro(request, pk):
+    user_obj = get_object_or_404(User, pk=pk)
+    HoSoChuTro.objects.filter(user=user_obj).delete()
+    messages.success(request, f'🔒 Đã thu hồi quyền Chủ trọ của {user_obj.username}!')
+    return redirect('custom_admin_users')
+
 @admin_only
 def custom_admin_phongtro(request):
     queryset = NhaTro.objects.all().order_by('-created_at')
-    for p in queryset: p.ten = p.ten_nha # Alias cho HTML cũ
+    for p in queryset: 
+        p.ten = p.ten_nha
+        phong_re = p.danh_sach_phong.order_by('gia_thue').first()
+        p.gia_thap_nhat = phong_re.gia_thue if phong_re else 0
     
-    # Phân trang: 5 dòng / trang
     paginator = Paginator(queryset, 5) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Chú ý: Đổi danh_sach_phong thành page_obj
     return render(request, 'map_app/admin_custom/phongtro_list.html', {'danh_sach_phong': page_obj})
 
 @admin_only
@@ -454,8 +479,6 @@ def custom_admin_xoa_phongtro(request, pk):
     phong.delete() 
     messages.success(request, "Đã xóa thành công!")
     return redirect('custom_admin_phongtro')
-
-# views.py
 
 @admin_only
 def custom_admin_them_phongtro(request):
@@ -473,11 +496,10 @@ def custom_admin_them_phongtro(request):
         for f in request.FILES.getlist('hinh_anh_phu'):
             HinhAnhNhaTro.objects.create(nha_tro=nha_moi, hinh_anh=f)
 
-        # ✅ ĐỌC PHÒNG CON
         phong_count = int(request.POST.get('phong_count', 0))
         for i in range(phong_count):
             ten_p = request.POST.get(f'phong_ten_{i}')
-            if not ten_p:   # slot đã bị user xóa → bỏ qua
+            if not ten_p:
                 continue
             PhongTro.objects.create(
                 nha_tro    = nha_moi,
@@ -491,7 +513,6 @@ def custom_admin_them_phongtro(request):
         messages.success(request, "Thêm khu trọ mới thành công!")
         return redirect('custom_admin_phongtro')
     return render(request, 'map_app/admin_custom/phongtro_form.html', {'action': 'Thêm Mới'})
-
 
 @admin_only
 def custom_admin_sua_phongtro(request, pk):
@@ -508,7 +529,6 @@ def custom_admin_sua_phongtro(request, pk):
         for f in request.FILES.getlist('hinh_anh_phu'):
             HinhAnhNhaTro.objects.create(nha_tro=phong, hinh_anh=f)
 
-        # ✅ THÊM PHÒNG CON MỚI KHI EDIT
         phong_count = int(request.POST.get('phong_count', 0))
         for i in range(phong_count):
             ten_p = request.POST.get(f'phong_ten_{i}')
@@ -528,14 +548,11 @@ def custom_admin_sua_phongtro(request, pk):
     return render(request, 'map_app/admin_custom/phongtro_form.html',
                   {'action': 'Chỉnh Sửa', 'phong': phong})
 
-
-@admin_only
+@chu_tro_required
 def custom_admin_sua_phong_con(request, pk):
-    """
-    AJAX endpoint – chỉnh sửa 1 phòng con.
-    Trả về JSON: {"success": true} hoặc {"success": false, "error": "..."}
-    """
     phong = get_object_or_404(PhongTro, pk=pk)
+    if not request.user.is_superuser and phong.nha_tro.owner != request.user:
+        return JsonResponse({'success': False, 'error': 'Bạn không có quyền sửa phòng này!'})
 
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
@@ -557,18 +574,25 @@ def custom_admin_sua_phong_con(request, pk):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-@admin_only  
+@chu_tro_required  
 def custom_admin_xoa_phong_con(request, pk):
     try:
-        get_object_or_404(PhongTro, pk=pk).delete()
+        phong = get_object_or_404(PhongTro, pk=pk)
+        if not request.user.is_superuser and phong.nha_tro.owner != request.user:
+            return JsonResponse({'success': False, 'error': 'Bạn không có quyền xóa phòng này!'})
+        
+        phong.delete()
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-@admin_only
+@chu_tro_required
 def custom_admin_xoa_anh_daidien(request, pk):
     try:
         phong = get_object_or_404(NhaTro, pk=pk)
+        if not request.user.is_superuser and phong.owner != request.user:
+            return JsonResponse({'success': False, 'error': 'Từ chối quyền truy cập!'})
+
         if phong.hinh_anh:
             phong.hinh_anh.delete(save=False) 
             phong.hinh_anh = None 
@@ -576,14 +600,17 @@ def custom_admin_xoa_anh_daidien(request, pk):
         return JsonResponse({'success': True})
     except Exception as e: return JsonResponse({'success': False, 'error': str(e)})
 
-@admin_only
+@chu_tro_required
 def custom_admin_xoa_anh_phongtro(request, anh_id):
     try:
-        get_object_or_404(HinhAnhNhaTro, pk=anh_id).delete()
+        anh = get_object_or_404(HinhAnhNhaTro, pk=anh_id)
+        if not request.user.is_superuser and anh.nha_tro.owner != request.user:
+            return JsonResponse({'success': False, 'error': 'Từ chối quyền truy cập!'})
+
+        anh.delete()
         return JsonResponse({'success': True})
     except Exception as e: return JsonResponse({'success': False, 'error': str(e)})
 
-# ... (Các hàm Tin tức, Khiếu nại, Đơn đặt phòng giữ nguyên)
 @admin_only
 def custom_admin_tintuc(request):
     return render(request, 'map_app/admin_custom/tintuc_list.html', {'danh_sach_tin': TinTuc.objects.all().order_by('-ngay_dang')})
@@ -665,51 +692,29 @@ def custom_admin_cap_nhat_khieunai(request, pk):
         messages.success(request, "Đã cập nhật trạng thái khiếu nại!")
     return redirect('custom_admin_khieunai')
 
-# ============================================================
-# THÊM / THAY THẾ vào views.py
-# ============================================================
-# Import thêm ở đầu file (nếu chưa có):
-# from .models import ..., TrangGioiThieu
-
-# ------- TRANG FRONTEND (người dùng xem) -------
-def gioi_thieu(request):
-    noi_dung = TrangGioiThieu.load()   # lấy singleton, tự tạo nếu chưa có
-    return render(request, 'map_app/pages/gioi_thieu.html', {'nd': noi_dung})
-
-
-# ------- TRANG ADMIN (quản trị viên chỉnh sửa) -------
 @admin_only
 def admin_gioi_thieu(request):
     noi_dung = TrangGioiThieu.load()
-
     if request.method == 'POST':
-        # --- Hero ---
         noi_dung.tieu_de_chinh  = request.POST.get('tieu_de_chinh', noi_dung.tieu_de_chinh)
         noi_dung.mo_ta_ngan     = request.POST.get('mo_ta_ngan',    noi_dung.mo_ta_ngan)
         if 'hinh_anh_banner' in request.FILES:
             noi_dung.hinh_anh_banner = request.FILES['hinh_anh_banner']
 
-        # --- Sứ mệnh ---
         noi_dung.tieu_de_su_menh  = request.POST.get('tieu_de_su_menh',  noi_dung.tieu_de_su_menh)
         noi_dung.noi_dung_su_menh = request.POST.get('noi_dung_su_menh', noi_dung.noi_dung_su_menh)
 
-        # --- Thống kê ---
         noi_dung.so_phong     = int(request.POST.get('so_phong',     0) or 0)
         noi_dung.so_sinh_vien = int(request.POST.get('so_sinh_vien', 0) or 0)
         noi_dung.so_quan      = int(request.POST.get('so_quan',      0) or 0)
         noi_dung.so_nam       = int(request.POST.get('so_nam',       0) or 0)
 
-        # --- Đội ngũ ---
         for i in [1, 2, 3]:
-            setattr(noi_dung, f'thanh_vien_{i}_ten',
-                    request.POST.get(f'thanh_vien_{i}_ten', ''))
-            setattr(noi_dung, f'thanh_vien_{i}_chuc_vu',
-                    request.POST.get(f'thanh_vien_{i}_chuc_vu', ''))
+            setattr(noi_dung, f'thanh_vien_{i}_ten', request.POST.get(f'thanh_vien_{i}_ten', ''))
+            setattr(noi_dung, f'thanh_vien_{i}_chuc_vu', request.POST.get(f'thanh_vien_{i}_chuc_vu', ''))
             if f'thanh_vien_{i}_anh' in request.FILES:
-                setattr(noi_dung, f'thanh_vien_{i}_anh',
-                        request.FILES[f'thanh_vien_{i}_anh'])
+                setattr(noi_dung, f'thanh_vien_{i}_anh', request.FILES[f'thanh_vien_{i}_anh'])
 
-        # --- Liên hệ ---
         noi_dung.email          = request.POST.get('email',          '')
         noi_dung.so_dien_thoai  = request.POST.get('so_dien_thoai',  '')
         noi_dung.dia_chi        = request.POST.get('dia_chi',        '')
@@ -719,64 +724,162 @@ def admin_gioi_thieu(request):
         noi_dung.save()
         messages.success(request, '✅ Đã cập nhật trang Giới thiệu thành công!')
         return redirect('admin_gioi_thieu')
-
     return render(request, 'map_app/admin_custom/gioi_thieu_form.html', {'nd': noi_dung})
 
-signer = TimestampSigner()
-
-# 1. HÀM XỬ LÝ BƯỚC 1: NHẬP EMAIL & GỬI LINK
-def yeu_cau_dang_ky(request):
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        if email:
-            # Kiểm tra xem email đã tồn tại chưa
-            if User.objects.filter(email=email).exists():
-                messages.error(request, "Email này đã được sử dụng. Vui lòng đăng nhập!")
-                return redirect('login')
-
-            # Tạo token mã hóa chứa email (để user không tự chế link được)
-            token = signer.sign(email)
-            
-            # Tạo link hoàn chỉnh để gửi qua mail
-            link = request.build_absolute_uri(reverse('xac_nhan_dang_ky', args=[token]))
-
-            # Gửi email qua Mailtrap
-            subject = 'Link xác nhận đăng ký tài khoản SmartRent 🏠'
-            html_message = render_to_string('map_app/emails/register_link_email.html', {'link': link})
-            plain_message = strip_tags(html_message)
-            
-            try:
-                send_mail(subject, plain_message, 'SmartRent <noreply@smartrent.vn>', [email], html_message=html_message)
-                messages.success(request, "Tuyệt vời! Vui lòng kiểm tra email (Mailtrap) để lấy link đăng ký.")
-                return redirect('login') # Đẩy về trang đăng nhập kèm thông báo
-            except Exception as e:
-                messages.error(request, f"Lỗi gửi mail: {e}")
-                
-    return render(request, 'map_app/yeu_cau_dang_ky.html')
-
-# 2. HÀM XỬ LÝ BƯỚC 2: CLICK LINK TỪ EMAIL VÀ HIỆN FORM ĐĂNG KÝ
-def xac_nhan_dang_ky(request, token):
-    try:
-        # Giải mã token, thiết lập hết hạn sau 15 phút (900 giây)
-        email = signer.unsign(token, max_age=900)
-    except SignatureExpired:
-        messages.error(request, "Link đăng ký đã hết hạn (quá 15 phút). Vui lòng gửi lại yêu cầu.")
-        return redirect('register')
-    except BadSignature:
-        messages.error(request, "Link đăng ký không hợp lệ hoặc đã bị chỉnh sửa.")
-        return redirect('register')
-
-    # Nếu token hợp lệ, hiện form đăng ký thực sự
-    if request.method == 'POST':
-        form = DangKyForm(request.POST) 
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.email = email # Ép cứng email từ token, không cho user đổi bậy bạ
-            user.save()
-            messages.success(request, "Đăng ký thành công! Chào mừng bạn đến với SmartRent.")
-            return redirect('login')
+@chu_tro_required
+def chu_tro_dashboard(request):
+    if request.user.is_superuser:
+        nha_list = NhaTro.objects.all()
     else:
-        # Truyền sẵn email vào form để user thấy
-        form = DangKyForm(initial={'email': email})
+        nha_list = NhaTro.objects.filter(owner=request.user)
+ 
+    tong_phong   = sum(n.danh_sach_phong.count() for n in nha_list)
+    phong_trong  = sum(n.danh_sach_phong.filter(trang_thai='trong').count() for n in nha_list)
+    don_cho      = DonDatPhong.objects.filter(phong__nha_tro__in=nha_list, trang_thai='cho_xac_nhan').count()
+ 
+    return render(request, 'map_app/chu_tro/dashboard.html', {
+        'nha_list':    nha_list,
+        'tong_nha':    nha_list.count(),
+        'tong_phong':  tong_phong,
+        'phong_trong': phong_trong,
+        'don_cho':     don_cho,
+    })
 
-    return render(request, 'map_app/register.html', {'form': form, 'email_verified': email})
+@chu_tro_required
+def chu_tro_danh_sach_phongtro(request):
+    if request.user.is_superuser:
+        ds = NhaTro.objects.all().order_by('-created_at')
+    else:
+        ds = NhaTro.objects.filter(owner=request.user).order_by('-created_at')
+        
+    for n in ds:
+        n.ten = n.ten_nha
+        phong_re = n.danh_sach_phong.order_by('gia_thue').first()
+        n.gia_thap_nhat = phong_re.gia_thue if phong_re else 0
+        
+    paginator = Paginator(ds, 5) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/chu_tro/phongtro_list.html', {'danh_sach_phong': page_obj})
+ 
+@chu_tro_required
+def chu_tro_them_phongtro(request):
+    if request.method == 'POST':
+        ten     = request.POST.get('ten')
+        dia_chi = request.POST.get('dia_chi')
+        mo_ta   = request.POST.get('mo_ta')
+        lat, lng = request.POST.get('lat'), request.POST.get('lng')
+        location = Point(float(lng), float(lat), srid=4326) if lat and lng else None
+ 
+        nha_moi = NhaTro.objects.create(
+            ten_nha=ten, dia_chi=dia_chi, mo_ta=mo_ta,
+            hinh_anh=request.FILES.get('hinh_anh'),
+            location=location,
+            owner=request.user,
+        )
+        for f in request.FILES.getlist('hinh_anh_phu'):
+            HinhAnhNhaTro.objects.create(nha_tro=nha_moi, hinh_anh=f)
+ 
+        phong_count = int(request.POST.get('phong_count', 0))
+        for i in range(phong_count):
+            ten_p = request.POST.get(f'phong_ten_{i}')
+            if not ten_p:
+                continue
+            PhongTro.objects.create(
+                nha_tro=nha_moi,
+                ten_phong=ten_p,
+                gia_thue=request.POST.get(f'phong_gia_{i}', 0),
+                dien_tich=request.POST.get(f'phong_dien_tich_{i}', 20),
+                trang_thai=request.POST.get(f'phong_trang_thai_{i}', 'trong'),
+                hinh_anh=request.FILES.get(f'phong_hinh_anh_{i}'),
+            )
+        messages.success(request, "Thêm khu trọ mới thành công!")
+        return redirect('chu_tro_danh_sach_phongtro')
+ 
+    return render(request, 'map_app/chu_tro/phongtro_form.html', {'action': 'Thêm Mới', 'back_url': 'chu_tro_danh_sach_phongtro'})
+ 
+@chu_tro_required
+def chu_tro_sua_phongtro(request, pk):
+    nha = get_object_or_404(NhaTro, pk=pk)
+    if not request.user.is_superuser and nha.owner != request.user:
+        raise PermissionDenied("Bạn không có quyền chỉnh sửa khu trọ này!")
+ 
+    nha.ten = nha.ten_nha
+    if request.method == 'POST':
+        nha.ten_nha = request.POST.get('ten')
+        nha.dia_chi = request.POST.get('dia_chi')
+        nha.mo_ta   = request.POST.get('mo_ta')
+        lat, lng = request.POST.get('lat'), request.POST.get('lng')
+        if lat and lng:
+            nha.location = Point(float(lng), float(lat), srid=4326)
+        if 'hinh_anh' in request.FILES:
+            nha.hinh_anh = request.FILES['hinh_anh']
+        nha.save()
+        for f in request.FILES.getlist('hinh_anh_phu'):
+            HinhAnhNhaTro.objects.create(nha_tro=nha, hinh_anh=f)
+ 
+        phong_count = int(request.POST.get('phong_count', 0))
+        for i in range(phong_count):
+            ten_p = request.POST.get(f'phong_ten_{i}')
+            if not ten_p:
+                continue
+            PhongTro.objects.create(
+                nha_tro=nha,
+                ten_phong=ten_p,
+                gia_thue=request.POST.get(f'phong_gia_{i}', 0),
+                dien_tich=request.POST.get(f'phong_dien_tich_{i}', 20),
+                trang_thai=request.POST.get(f'phong_trang_thai_{i}', 'trong'),
+                hinh_anh=request.FILES.get(f'phong_hinh_anh_{i}'),
+            )
+        messages.success(request, "Đã cập nhật khu trọ!")
+        return redirect('chu_tro_danh_sach_phongtro')
+ 
+    return render(request, 'map_app/chu_tro/phongtro_form.html', {'action': 'Chỉnh Sửa', 'phong': nha, 'back_url': 'chu_tro_danh_sach_phongtro'})
+ 
+@chu_tro_required
+def chu_tro_xoa_phongtro(request, pk):
+    nha = get_object_or_404(NhaTro, pk=pk)
+    if not request.user.is_superuser and nha.owner != request.user:
+        raise PermissionDenied("Bạn không có quyền xóa khu trọ này!")
+    nha.delete()
+    messages.success(request, "Đã xóa khu trọ!")
+    return redirect('chu_tro_danh_sach_phongtro')
+
+@chu_tro_required
+def chu_tro_don_dat_phong(request):
+    if request.user.is_superuser:
+        ds = DonDatPhong.objects.all().order_by('-ngay_tao')
+    else:
+        nha_list = NhaTro.objects.filter(owner=request.user)
+        ds = DonDatPhong.objects.filter(phong__nha_tro__in=nha_list).order_by('-ngay_tao')
+    return render(request, 'map_app/chu_tro/don_dat_phong.html', {'danh_sach_don': ds})
+ 
+@chu_tro_required
+def chu_tro_duyet_don(request, pk):
+    don = get_object_or_404(DonDatPhong, pk=pk)
+    if not request.user.is_superuser and don.phong.nha_tro.owner != request.user:
+        raise PermissionDenied("Bạn không có quyền duyệt đơn này!")
+        
+    if request.method == 'POST':
+        trang_thai_moi = request.POST.get('trang_thai')
+        don.trang_thai = trang_thai_moi
+        don.save()
+        
+        if trang_thai_moi == 'huy' or trang_thai_moi == 'tu_choi':
+            don.phong.trang_thai = 'trong'
+            don.phong.save()
+        elif trang_thai_moi == 'da_duyet' or trang_thai_moi == 'thanh_cong':
+            don.phong.trang_thai = 'da_thue'
+            don.phong.save()
+
+        messages.success(request, "Đã cập nhật trạng thái đơn!")
+    return redirect('chu_tro_don_dat_phong')
+
+@chu_tro_required
+def chu_tro_xoa_don(request, pk):
+    don = get_object_or_404(DonDatPhong, pk=pk)
+    if not request.user.is_superuser and don.phong.nha_tro.owner != request.user:
+        raise PermissionDenied("Bạn không có quyền xóa đơn này!")
+    don.delete()
+    messages.success(request, "Đã xóa đơn đặt phòng!")
+    return redirect('chu_tro_don_dat_phong')

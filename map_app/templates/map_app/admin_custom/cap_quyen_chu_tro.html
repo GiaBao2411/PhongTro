@@ -1,0 +1,86 @@
+{% extends 'map_app/admin_custom/admin_base.html' %}
+{% block title %}Cấp quyền Chủ trọ{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold text-dark">
+            <i class="bi bi-shield-plus me-2 text-warning"></i>Cấp quyền Chủ trọ
+        </h4>
+        <small class="text-muted">Cho phép {{ user_obj.username }} đăng và quản lý phòng trọ</small>
+    </div>
+    <a href="{% url 'custom_admin_users' %}" class="btn btn-outline-secondary rounded-pill">
+        <i class="bi bi-arrow-left me-1"></i> Quay lại
+    </a>
+</div>
+
+<div class="row justify-content-center">
+<div class="col-md-6">
+
+{% if ho_so %}
+<div class="alert alert-warning border-0 rounded-4 mb-4 d-flex align-items-center gap-3">
+    <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+    <div>
+        <strong>{{ user_obj.username }}</strong> đã có quyền Chủ trọ từ {{ ho_so.ngay_cap|date:"d/m/Y" }}.
+        Lưu form sẽ cập nhật thông tin. Hoặc
+        <a href="{% url 'admin_thu_hoi_quyen_chu_tro' user_obj.pk %}"
+           class="fw-bold text-danger"
+           onclick="return confirm('Thu hồi quyền Chủ trọ của {{ user_obj.username }}?')">
+            thu hồi quyền
+        </a>.
+    </div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+
+        {# Thông tin user #}
+        <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-4">
+            <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                 style="width:48px;height:48px;background:#1a237e;font-size:1.2rem;flex-shrink:0;">
+                {{ user_obj.username|first|upper }}
+            </div>
+            <div>
+                <div class="fw-bold">{{ user_obj.username }}</div>
+                <div class="text-muted small">{{ user_obj.email }}</div>
+                <div class="text-muted small">Tham gia: {{ user_obj.date_joined|date:"d/m/Y" }}</div>
+            </div>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-bold small">Số điện thoại liên hệ</label>
+                <input type="text" name="so_dien_thoai" class="form-control"
+                       value="{{ ho_so.so_dien_thoai|default:'' }}"
+                       placeholder="0909 123 456">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold small">Địa chỉ</label>
+                <input type="text" name="dia_chi" class="form-control"
+                       value="{{ ho_so.dia_chi|default:'' }}"
+                       placeholder="123 Đường ABC, Quận 1">
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold small">Ghi chú (nội bộ)</label>
+                <textarea name="ghi_chu" class="form-control" rows="2"
+                          placeholder="VD: Chủ trọ khu vực Quận 10, đã xác minh CCCD">{{ ho_so.ghi_chu|default:'' }}</textarea>
+            </div>
+            <div class="alert alert-info border-0 rounded-3 small mb-4">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                Sau khi cấp quyền, <strong>{{ user_obj.username }}</strong> có thể đăng nhập và
+                truy cập <code>/chu-tro/</code> để quản lý khu trọ của mình.
+                Họ <strong>không thể</strong> truy cập trang quản lý Users, Tin tức, Khiếu nại.
+            </div>
+            <button type="submit" class="btn btn-warning fw-bold w-100 py-3 rounded-3">
+                <i class="bi bi-shield-check me-2"></i>
+                {% if ho_so %}Cập nhật quyền{% else %}Cấp quyền Chủ trọ{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+
+</div>
+</div>
+{% endblock %}
