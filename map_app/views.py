@@ -398,7 +398,11 @@ def admin_dashboard(request):
 
 @admin_only
 def custom_admin_users(request):
-    return render(request, 'map_app/admin_custom/user_list.html', {'danh_sach_user': User.objects.all().order_by('-date_joined')})
+    queryset = User.objects.all().order_by('-date_joined')
+    paginator = Paginator(queryset, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/admin_custom/user_list.html', {'danh_sach_user': page_obj})
 
 @admin_only
 def custom_admin_khoa_user(request, pk):
@@ -613,7 +617,11 @@ def custom_admin_xoa_anh_phongtro(request, anh_id):
 
 @admin_only
 def custom_admin_tintuc(request):
-    return render(request, 'map_app/admin_custom/tintuc_list.html', {'danh_sach_tin': TinTuc.objects.all().order_by('-ngay_dang')})
+    queryset = TinTuc.objects.all().order_by('-ngay_dang')
+    paginator = Paginator(queryset, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/admin_custom/tintuc_list.html', {'danh_sach_tin': page_obj})
 
 @admin_only
 def custom_admin_them_tintuc(request):
@@ -662,7 +670,11 @@ def custom_admin_xoa_anh_phu_tintuc(request, anh_id):
 
 @admin_only
 def custom_admin_dondatphong(request):
-    return render(request, 'map_app/admin_custom/dondatphong_list.html', {'danh_sach_don': DonDatPhong.objects.all().order_by('-ngay_tao')})
+    queryset = DonDatPhong.objects.all().order_by('-ngay_tao')
+    paginator = Paginator(queryset, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/admin_custom/dondatphong_list.html', {'danh_sach_don': page_obj})
 
 @admin_only
 def custom_admin_duyet_don(request, pk):
@@ -681,7 +693,11 @@ def custom_admin_xoa_don(request, pk):
 
 @admin_only
 def custom_admin_khieunai(request):
-    return render(request, 'map_app/admin_custom/khieunai_list.html', {'danh_sach': KhieuNai.objects.all().order_by('-ngay_tao')})
+    queryset = KhieuNai.objects.all().order_by('-ngay_tao')
+    paginator = Paginator(queryset, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/admin_custom/khieunai_list.html', {'danh_sach': page_obj})
 
 @admin_only
 def custom_admin_cap_nhat_khieunai(request, pk):
@@ -852,7 +868,10 @@ def chu_tro_don_dat_phong(request):
     else:
         nha_list = NhaTro.objects.filter(owner=request.user)
         ds = DonDatPhong.objects.filter(phong__nha_tro__in=nha_list).order_by('-ngay_tao')
-    return render(request, 'map_app/chu_tro/don_dat_phong.html', {'danh_sach_don': ds})
+    paginator = Paginator(ds, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'map_app/chu_tro/don_dat_phong.html', {'danh_sach_don': page_obj})
  
 @chu_tro_required
 def chu_tro_duyet_don(request, pk):

@@ -137,5 +137,34 @@
             </table>
         </div>
     </div>
+    <div class="card-footer bg-white text-muted small ps-4">
+        Tổng cộng: {{ danh_sach_don.paginator.count }} đơn
+    </div>
 </div>
+
+{% if danh_sach_don.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-end">
+        {% if danh_sach_don.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ danh_sach_don.previous_page_number }}">Trang trước</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Trang trước</span></li>
+        {% endif %}
+
+        {% for i in danh_sach_don.paginator.page_range %}
+            {% if danh_sach_don.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if danh_sach_don.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ danh_sach_don.next_page_number }}">Trang sau</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Trang sau</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% endblock %}

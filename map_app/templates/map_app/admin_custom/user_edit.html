@@ -1,53 +1,142 @@
 {% extends 'map_app/admin_custom/admin_base.html' %}
-{% block title %}Chỉnh sửa Người Dùng{% endblock %}
+{% block title %}Quản lý Người Dùng - SmartRent{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0 fw-bold text-dark">
-        <i class="bi bi-person-lines-fill"></i> Chỉnh sửa User: <span class="text-primary">{{ user_obj.username }}</span>
-    </h4>
-    <a href="{% url 'custom_admin_users' %}" class="btn btn-outline-secondary fw-bold px-3">
-        <i class="bi bi-arrow-left"></i> Quay lại
-    </a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-people-fill"></i> Quản lý Người Dùng</h4>
 </div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+            <strong>Thông báo:</strong> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
 
 <div class="card shadow-sm border-0 rounded-4">
-    <div class="card-body p-4">
-        <form method="POST" action="">
-            {% csrf_token %}
-            
-            <h6 class="fw-bold text-uppercase text-muted mb-3">Thông tin cá nhân</h6>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Họ (Last name)</label>
-                    <input type="text" name="last_name" class="form-control" value="{{ user_obj.last_name }}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Tên (First name)</label>
-                    <input type="text" name="first_name" class="form-control" value="{{ user_obj.first_name }}">
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <label class="form-label fw-bold">Email address</label>
-                <input type="email" name="email" class="form-control" value="{{ user_obj.email }}">
-            </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-nowrap">
+                    <tr>
+                        <th class="ps-4">Username</th>
+                        <th>Email address</th>
+                        <th class="text-center">Staff status</th>
+                        <th class="text-center">Trạng thái (Active)</th>
+                        <th class="text-center">Quyền</th> <th class="text-center pe-4">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for nguoi_dung in danh_sach_user %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-primary">{{ nguoi_dung.username }}</td>
+                        
+                        <td class="text-muted">{{ nguoi_dung.email|default:"---" }}</td>
+                        
+                        <td class="text-center">
+                            {% if nguoi_dung.is_staff or nguoi_dung.is_superuser %}
+                                <i class="bi bi-shield-fill-check text-primary fs-5" title="Quản trị viên"></i>
+                            {% else %}
+                                <i class="bi bi-person text-secondary fs-5" title="Người dùng thường"></i>
+                            {% endif %}
+                        </td>
 
-            <hr class="my-4">
+                        <td class="text-center">
+                            {% if nguoi_dung.is_active %}
+                                <span class="badge bg-success text-nowrap">Đang hoạt động</span>
+                            {% else %}
+                                <span class="badge bg-danger text-nowrap">Bị khóa</span>
+                            {% endif %}
+                        </td>
 
-            <h6 class="fw-bold text-uppercase text-danger mb-3"><i class="bi bi-key-fill"></i> Đổi mật khẩu (Tùy chọn)</h6>
-            <div class="alert alert-warning small">
-                * Nếu muốn đổi mật khẩu, hãy nhập mật khẩu mới vào ô bên dưới. Nếu không đổi, hãy để trống ô này.
-            </div>
-            <div class="mb-4">
-                <label class="form-label fw-bold">Mật khẩu mới</label>
-                <input type="text" name="new_password" class="form-control" placeholder="Nhập mật khẩu mới (hoặc để trống)...">
-            </div>
+                        <td class="text-center">
+                            {% if nguoi_dung.is_superuser %}
+                                <span class="badge" style="background:#7F77DD;">Admin</span>
+                            {% elif nguoi_dung.ho_so_chu_tro %}
+                                <span class="badge bg-warning text-dark">Chủ trọ</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">User</span>
+                            {% endif %}
+                        </td>
 
-            <button type="submit" class="btn btn-success fw-bold px-4 py-2">
-                <i class="bi bi-save me-1"></i> Lưu thay đổi
-            </button>
-        </form>
+                        <td class="text-center pe-4 text-nowrap">
+                            <a href="{% url 'custom_admin_edit_user' nguoi_dung.id %}" class="btn btn-sm btn-primary me-1" title="Sửa thông tin">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+
+                            {% if request.user != nguoi_dung %}
+                                {% if not nguoi_dung.is_superuser %}
+                                    {% if nguoi_dung.ho_so_chu_tro %}
+                                        <a href="{% url 'admin_thu_hoi_quyen_chu_tro' nguoi_dung.pk %}" 
+                                           class="btn btn-sm btn-outline-warning me-1" 
+                                           onclick="return confirm('Thu hồi quyền Chủ trọ của {{ nguoi_dung.username }}?')"
+                                           title="Thu hồi quyền Chủ trọ">
+                                            <i class="bi bi-shield-x"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'admin_cap_quyen_chu_tro' nguoi_dung.pk %}" 
+                                           class="btn btn-sm btn-outline-success me-1" 
+                                           title="Cấp quyền Chủ trọ">
+                                            <i class="bi bi-shield-plus"></i>
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+
+                                {% if nguoi_dung.is_active %}
+                                    <a href="{% url 'custom_admin_khoa_user' nguoi_dung.id %}" class="btn btn-sm btn-warning" title="Khóa tài khoản" onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản {{ nguoi_dung.username }}?');">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'custom_admin_khoa_user' nguoi_dung.id %}" class="btn btn-sm btn-success" title="Mở khóa tài khoản">
+                                        <i class="bi bi-unlock-fill"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'custom_admin_xoa_user' nguoi_dung.id %}" class="btn btn-sm btn-danger ms-1" title="Xóa người dùng" onclick="return confirm('CẢNH BÁO: Xóa {{ nguoi_dung.username }} không thể hoàn tác. Tiếp tục?');">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-muted border text-nowrap">Là bạn</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-5 text-muted">Chưa có người dùng nào.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> 
+    </div>
+    <div class="card-footer bg-white text-muted small ps-4">
+        Tổng cộng: {{ danh_sach_user.paginator.count }} người dùng
     </div>
 </div>
+
+{% if danh_sach_user.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-end">
+        {% if danh_sach_user.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ danh_sach_user.previous_page_number }}">Trang trước</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Trang trước</span></li>
+        {% endif %}
+
+        {% for i in danh_sach_user.paginator.page_range %}
+            {% if danh_sach_user.number == i %}
+                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if danh_sach_user.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ danh_sach_user.next_page_number }}">Trang sau</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Trang sau</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% endblock %}

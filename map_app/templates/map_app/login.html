@@ -23,7 +23,14 @@
                         </div>
                         <div class="mb-3">
                             <label class="fw-bold">Mật khẩu</label>
-                            <input type="password" name="password" class="form-control" required>
+                            <!-- BỌC Ô PASSWORD LẠI ĐỂ GẮN CON MẮT -->
+                            <div class="position-relative">
+                                <input type="password" name="password" id="loginPassword" class="form-control pe-5" required>
+                                <span class="position-absolute top-50 end-0 translate-middle-y pe-3" style="cursor: pointer; z-index: 10;" onclick="togglePassword('loginPassword', this)">
+                                    <i class="bi bi-eye text-muted fs-5"></i>
+                                </span>
+                            </div>
+                            
                             <div class="text-end mt-2">
                                 <a href="{% url 'quen_mat_khau' %}" class="text-decoration-none small text-primary fw-bold">
                                     <i class="bi bi-question-circle"></i> Quên mật khẩu?
@@ -41,4 +48,26 @@
         </div>
     </div>
 </div>
+
+<!-- ĐOẠN JAVASCRIPT ĐỂ CHỚP MẮT -->
+<script>
+    function togglePassword(inputId, iconSpan) {
+        const input = document.getElementById(inputId);
+        const icon = iconSpan.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+            icon.classList.remove('text-muted');
+            icon.classList.add('text-primary'); // Đổi màu khi hiện pass
+        } else {
+            input.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+            icon.classList.remove('text-primary');
+            icon.classList.add('text-muted');
+        }
+    }
+</script>
 {% endblock %}
