@@ -1,0 +1,15 @@
+{% extends 'map_app/base.html' %}
+{% block title %}500 - Lỗi hệ thống{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center min-vh-100 d-flex flex-column justify-content-center align-items-center">
+    <i class="bi bi-hdd-network-fill text-warning mb-3" style="font-size: 7rem;"></i>
+    <h1 class="display-4 fw-bold text-dark mb-3">500 - Lỗi Máy Chủ</h1>
+    <p class="text-muted mb-4 fs-5">
+        Hệ thống đang gặp sự cố kỹ thuật hoặc quá tải. Đội ngũ kỹ thuật đang xử lý.
+    </p>
+    <a href="{% url 'home' %}" class="btn btn-warning btn-lg fw-bold text-dark rounded-pill px-5 shadow-sm">
+        <i class="bi bi-arrow-clockwise me-2"></i> Thử tải lại trang
+    </a>
+</div>
+{% endblock %}

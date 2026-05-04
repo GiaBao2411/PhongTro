@@ -1,0 +1,9 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Thành công{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+    <h3 class="fw-bold mt-3">Đổi mật khẩu thành công!</h3>
+    <a href="{% url 'login' %}" class="btn btn-primary fw-bold rounded-pill mt-3 px-4">Đăng Nhập Ngay</a>
+</div>
+{% endblock %}

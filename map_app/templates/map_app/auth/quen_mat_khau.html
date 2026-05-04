@@ -1,0 +1,60 @@
+{% extends 'map_app/base.html' %}
+{% block title %}Khôi phục mật khẩu{% endblock %}
+
+{% block content %}
+<div class="container py-5 d-flex justify-content-center">
+    <div class="bg-white p-4" style="max-width: 550px; width: 100%;">
+        
+        <div class="text-center mb-4">
+            <img src="https://cdn-icons-png.flaticon.com/512/6195/6195696.png" alt="SmartRent Mascot" style="width: 130px; object-fit: contain;">
+        </div>
+
+        <div class="text-center mb-4">
+            <h2 class="fw-bold mb-3" style="color: #0e00d7;">Tạo mật khẩu mới</h2>
+            <p class="text-dark" style="font-size: 0.95rem;">
+                Hãy nhập email của bạn vào bên dưới để bắt đầu quá<br>trình khôi phục mật khẩu.
+            </p>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            {% if form.email.errors %}
+                <div class="alert alert-danger py-2 small mb-3">
+                    {{ form.email.errors|striptags }}
+                </div>
+            {% endif %}
+
+            <div class="mb-4">
+                <label class="form-label text-dark mb-2" style="font-size: 0.9rem;">Email</label>
+                <input type="email" name="email" class="form-control" style="border-radius: 8px; height: 48px; border-color: #ced4da;" placeholder="Nhập địa chỉ email..." required>
+            </div>
+
+            <div class="d-flex gap-3 mt-2">
+                <a href="{% url 'login' %}" class="btn btn-white border w-50 fw-bold d-flex align-items-center justify-content-center text-dark" style="border-radius: 8px; height: 48px;">
+                    <i class="bi bi-chevron-left me-2" style="font-size: 0.8rem; -webkit-text-stroke: 1px;"></i> Quay lại đăng nhập
+                </a>
+                
+                <button type="submit" class="btn w-50 fw-bold text-white" style="border-radius: 8px; height: 48px; background-color: #0e00d7; border: none;">
+                    Tiếp tục
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<style>
+    .form-control:focus {
+        border-color: #0e00d7;
+        box-shadow: 0 0 0 0.25rem rgba(215, 0, 24, 0.15);
+    }
+    .btn-white:hover {
+        background-color: #f8f9fa;
+        border-color: #c1c9d0;
+    }
+    .btn[type="submit"]:hover {
+        background-color: #0e00d7;
+    }
+</style>
+{% endblock %}
