@@ -12,12 +12,13 @@
 3. [Cài đặt PostgreSQL & PostGIS](#3-cài-đặt-postgresql--postgis)
 4. [Tải & cấu hình dự án](#4-tải--cấu-hình-dự-án)
 5. [Cấu hình database](#5-cấu-hình-database)
-6. [Chạy dự án](#6-chạy-dự-án)
-7. [Tạo tài khoản Admin](#7-tạo-tài-khoản-admin)
-8. [Cấu trúc thư mục](#8-cấu-trúc-thư-mục)
-9. [Tính năng hệ thống](#9-tính-năng-hệ-thống)
-10. [Phân quyền người dùng](#10-phân-quyền-người-dùng)
-11. [Lỗi thường gặp](#11-lỗi-thường-gặp)
+6. [Khôi phục từ file backup SQL](#6-khôi-phục-từ-file-backup-sql)
+7. [Chạy dự án](#7-chạy-dự-án)
+8. [Tạo tài khoản Admin](#8-tạo-tài-khoản-admin)
+9. [Cấu trúc thư mục](#9-cấu-trúc-thư-mục)
+10. [Tính năng hệ thống](#10-tính-năng-hệ-thống)
+11. [Phân quyền người dùng](#11-phân-quyền-người-dùng)
+12. [Lỗi thường gặp](#12-lỗi-thường-gặp)
 
 ---
 
@@ -219,7 +220,82 @@ python manage.py loaddata data_sample.json
 
 ---
 
-## 6. Chạy dự án
+## 6. Khôi phục từ file backup SQL
+
+> 💡 Nếu bạn được cung cấp file **`webgis_db.sql`** (backup sẵn dữ liệu), làm theo hướng dẫn này **thay cho Bước 5** để không cần migrate thủ công.
+
+### Bước 6.1 – Đảm bảo database đã được tạo
+
+Mở **pgAdmin 4**, kiểm tra database `webgis_db` đã tồn tại. Nếu chưa có, tạo mới như hướng dẫn ở **Bước 3.3**.
+
+Sau đó kích hoạt PostGIS (nếu chưa làm):
+
+```sql
+-- Chạy trong pgAdmin Query Tool, chọn đúng database webgis_db
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+### Bước 6.2 – Restore bằng pgAdmin (cách dễ nhất)
+
+1. Mở **pgAdmin 4**
+2. Click chuột phải vào database **`webgis_db`** → chọn **Restore...**
+3. Ở ô **Filename**, nhấn nút 📁 và chọn file `webgis_db.sql` (hoặc `.backup`)
+4. Chuyển sang tab **Restore options** → bật **"Clean before restore"** nếu muốn xóa dữ liệu cũ trước
+5. Nhấn **Restore** và chờ hoàn tất
+
+> ✅ Khi thấy thông báo **"Process completed"** là thành công.
+
+### Bước 6.3 – Restore bằng dòng lệnh (cách nhanh)
+
+Mở **Anaconda Prompt** hoặc **Command Prompt**, chạy lệnh sau:
+
+```bash
+# Cú pháp chung
+psql -U postgres -d webgis_db -f "đường_dẫn_đến_file.sql"
+
+# Ví dụ cụ thể (file backup để ở D:\)
+psql -U postgres -d webgis_db -f "D:\webgis_db.sql"
+```
+
+Nhập **password PostgreSQL** khi được hỏi (mặc định là `123`).
+
+Kết quả mong đợi:
+```
+SET
+SET
+SET
+...
+ALTER TABLE
+ALTER SEQUENCE
+```
+
+> Nếu thấy một số dòng `ERROR: relation already exists` → không sao, đó là bảng đã tồn tại, dữ liệu vẫn được import bình thường.
+
+### Bước 6.4 – Kiểm tra sau khi restore
+
+Mở **pgAdmin 4** → vào `webgis_db` → **Schemas** → **Tables**, kiểm tra các bảng đã xuất hiện đầy đủ:
+
+```
+map_app_nhatro
+map_app_phongtro
+map_app_hinhanhnathatro
+map_app_tintuc
+map_app_dondatphong
+map_app_danhgia
+map_app_khieunai
+auth_user
+...
+```
+
+### Bước 6.5 – Bỏ qua migrate, chạy thẳng server
+
+Vì dữ liệu đã được restore đầy đủ từ backup, **không cần chạy** `makemigrations` hay `migrate` nữa. Chuyển thẳng sang **Bước 7** để chạy server.
+
+> ⚠️ **Lưu ý:** Tài khoản admin trong file backup có thể khác với máy bạn. Nếu không đăng nhập được, tạo superuser mới theo **Bước 8**.
+
+---
+
+## 7. Chạy dự án
 
 ```bash
 # Đảm bảo đang trong thư mục dự án và môi trường đã kích hoạt
@@ -241,7 +317,7 @@ Mở trình duyệt và truy cập:
 
 ---
 
-## 7. Tạo tài khoản Admin
+## 8. Tạo tài khoản Admin
 
 ```bash
 python manage.py createsuperuser
@@ -259,7 +335,7 @@ Sau đó đăng nhập tại http://127.0.0.1:8000/dang-nhap/ bằng tài khoả
 
 ---
 
-## 8. Cấu trúc thư mục
+## 9. Cấu trúc thư mục
 
 ```
 webgis_dss/
@@ -284,7 +360,7 @@ webgis_dss/
 │       │   ├── phongtro_form.html
 │       │   └── ...
 │       └── chu_tro/            # Giao diện chủ trọ
-│           ├── base.html
+│           ├── chu_tro_base.html
 │           ├── dashboard.html
 │           └── ...
 ├── static/
@@ -295,7 +371,7 @@ webgis_dss/
 
 ---
 
-## 9. Tính năng hệ thống
+## 10. Tính năng hệ thống
 
 ### 👤 Người dùng thường
 - Tìm phòng trọ theo **thời gian di chuyển** (isochrone GIS)
@@ -317,7 +393,7 @@ webgis_dss/
 
 ---
 
-## 10. Phân quyền người dùng
+## 11. Phân quyền người dùng
 
 | Chức năng | User thường | Chủ trọ | Admin |
 |---|:---:|:---:|:---:|
@@ -340,7 +416,7 @@ webgis_dss/
 
 ---
 
-## 11. Lỗi thường gặp
+## 12. Lỗi thường gặp
 
 ### ❌ `GDAL_LIBRARY_PATH` không tìm thấy
 
@@ -420,6 +496,20 @@ TEMPLATES = [{
     ...
 }]
 ```
+
+---
+
+### ❌ Restore SQL báo lỗi `psql` không tìm thấy
+
+```
+'psql' is not recognized as an internal or external command
+```
+
+**Cách sửa:** Thêm PostgreSQL vào PATH của Windows:
+1. Mở **System Properties** → **Environment Variables**
+2. Tìm biến `Path` → **Edit** → **New**
+3. Thêm đường dẫn: `C:\Program Files\PostgreSQL\15\bin` (thay `15` bằng version bạn cài)
+4. Nhấn OK và mở lại Command Prompt
 
 ---
 
